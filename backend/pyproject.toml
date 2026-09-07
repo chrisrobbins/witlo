@@ -22,7 +22,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S105", "S106", "S311"]
+"tests/*" = ["S105", "S106", "S107", "S311"]
+# The response/request models mirror the JSON contract the browser consumes,
+# which is camelCase. Renaming the fields would break the API, not fix it.
+"app/api/schemas.py" = ["N815"]
 
 [tool.coverage.run]
 source = ["app"]

@@ -13,6 +13,7 @@ The unique constraints created here are load-bearing, not hygiene:
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0001_initial"

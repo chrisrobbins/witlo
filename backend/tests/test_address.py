@@ -106,6 +106,9 @@ def test_validation_accepts_and_tidies_a_good_address() -> None:
         UsAddress("  414  W San Antonio St ", " ", " Marfa ", "tx", " 79843 ")
     )
     assert cleaned == UsAddress("414 W San Antonio St", "", "Marfa", "TX", "79843")
-    assert validate_us_address(
-        UsAddress("9 Highland Ave", "Apt 4B", "Somerville", "MA", "02143-1234")
-    ).zip == "02143-1234"
+    assert (
+        validate_us_address(
+            UsAddress("9 Highland Ave", "Apt 4B", "Somerville", "MA", "02143-1234")
+        ).zip
+        == "02143-1234"
+    )

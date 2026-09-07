@@ -34,7 +34,8 @@ async def lifespan(app: FastAPI):
     mail, payments = get_providers()
 
     log.info(
-        "starting in %s mode | mail=%s (real mail: %s) | payments=%s (real money: %s) | template v%s",
+        "starting in %s mode | mail=%s (real mail: %s) | "
+        "payments=%s (real money: %s) | template v%s",
         settings.app_mode,
         mail.name,
         mail.can_send_real_mail,

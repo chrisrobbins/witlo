@@ -96,7 +96,7 @@ class LobMailProvider:
     # --- plumbing ---------------------------------------------------------
 
     def _headers(self, extra: dict[str, str] | None = None) -> dict[str, str]:
-        token = base64.b64encode(f"{self._api_key}:".encode("utf-8")).decode("ascii")
+        token = base64.b64encode(f"{self._api_key}:".encode()).decode("ascii")
         headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
         headers.update(extra or {})
         return headers
@@ -107,7 +107,9 @@ class LobMailProvider:
                 f"{API_ROOT}{path}", data=data, headers=self._headers(extra_headers)
             )
         except httpx.HTTPError as exc:
-            raise MailProviderError(f"Could not reach the mailing provider: {exc}", retryable=True) from exc
+            raise MailProviderError(
+                f"Could not reach the mailing provider: {exc}", retryable=True
+            ) from exc
 
         if response.status_code >= 500 or response.status_code == 429:
             raise MailProviderError(
@@ -244,5 +246,5 @@ def _parse_date(value: Any) -> date | None:
 def _error_message(response: httpx.Response) -> str:
     try:
         return str(response.json().get("error", {}).get("message", response.text))[:300]
-    except Exception:  # noqa: BLE001 - error paths must never raise
+    except Exception:
         return response.text[:300]

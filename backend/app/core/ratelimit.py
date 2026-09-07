@@ -10,7 +10,7 @@ Keys are peppered hashes of the client IP; nothing here stores an address.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -28,7 +28,7 @@ class RateLimitResult:
 
 def _window_start(now: datetime, window_seconds: int) -> datetime:
     epoch = int(now.timestamp())
-    return datetime.fromtimestamp(epoch - (epoch % window_seconds), tz=timezone.utc)
+    return datetime.fromtimestamp(epoch - (epoch % window_seconds), tz=UTC)
 
 
 def check_and_consume(
@@ -43,7 +43,7 @@ def check_and_consume(
     if limit <= 0:
         return RateLimitResult(allowed=True, remaining=0, retry_after_seconds=0)
 
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     start = _window_start(current, window_seconds)
 
     row = db.execute(
@@ -79,7 +79,7 @@ def check_and_consume(
 
 
 def purge_old_buckets(db: Session, older_than_days: int = 2) -> int:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+    cutoff = datetime.now(UTC) - timedelta(days=older_than_days)
     rows = db.execute(
         select(RateLimitBucket).where(RateLimitBucket.window_start < cutoff)
     ).scalars()

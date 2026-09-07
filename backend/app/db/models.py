@@ -21,7 +21,7 @@ letter.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -38,7 +38,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def new_id(prefix: str) -> str:
@@ -107,7 +107,7 @@ class Letter(Base):
     )
     purged: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    events: Mapped[list["LetterEvent"]] = relationship(
+    events: Mapped[list[LetterEvent]] = relationship(
         back_populates="letter", cascade="all, delete-orphan", order_by="LetterEvent.created_at"
     )
 

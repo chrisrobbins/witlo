@@ -84,13 +84,11 @@ class Settings(BaseSettings):
     @classmethod
     def _no_wildcard(cls, value: str) -> str:
         if "*" in value:
-            raise ValueError(
-                "CORS_ALLOW_ORIGINS must list exact origins; this API accepts writes."
-            )
+            raise ValueError("CORS_ALLOW_ORIGINS must list exact origins; this API accepts writes.")
         return value
 
     @model_validator(mode="after")
-    def _live_mode_requires_credentials(self) -> "Settings":
+    def _live_mode_requires_credentials(self) -> Settings:
         if self.app_mode != "live":
             return self
 
@@ -102,7 +100,9 @@ class Settings(BaseSettings):
                 problems.append("LOB_API_KEY is required")
             if not self.lob_webhook_secret:
                 problems.append("LOB_WEBHOOK_SECRET is required")
-            if not (self.return_line1 and self.return_city and self.return_state and self.return_zip):
+            if not (
+                self.return_line1 and self.return_city and self.return_state and self.return_zip
+            ):
                 problems.append("a complete RETURN_* address is required")
         if self.payment_provider == "stripe":
             if not self.stripe_secret_key:
@@ -113,9 +113,7 @@ class Settings(BaseSettings):
             problems.append("ADDRESS_PEPPER must be changed from the default")
 
         if problems:
-            raise ValueError(
-                "Refusing to start in live mode:\n  - " + "\n  - ".join(problems)
-            )
+            raise ValueError("Refusing to start in live mode:\n  - " + "\n  - ".join(problems))
         return self
 
     # --- Derived ----------------------------------------------------------

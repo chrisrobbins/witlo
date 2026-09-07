@@ -11,16 +11,27 @@ No LLM, no randomness, no clock except the date passed in.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
-from typing import Literal, Sequence
+from typing import Literal
 
 from .address import UsAddress
 from .content import OBSERVATION_KEYS, SUGGESTION_KEYS, load_content, note_max_chars
 
 MONTHS = (
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 )
 
 _CONTROL = re.compile(r"[\u0000-\u001F\u007F-\u009F]")

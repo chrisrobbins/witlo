@@ -19,7 +19,7 @@ The invariants this module exists to hold:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -137,9 +137,9 @@ def cooldown_until(db: Session, hashed: str, settings: Settings) -> datetime | N
     if last is None:
         return None
     if last.tzinfo is None:
-        last = last.replace(tzinfo=timezone.utc)
+        last = last.replace(tzinfo=UTC)
     ends = last + timedelta(days=settings.repeat_address_cooldown_days)
-    return ends if ends > datetime.now(timezone.utc) else None
+    return ends if ends > datetime.now(UTC) else None
 
 
 def lifetime_letters(db: Session, hashed: str) -> int:
@@ -258,9 +258,7 @@ def create_draft(
     )
     db.add(letter)
     db.flush()
-    db.add(
-        LetterEvent(letter_id=letter.id, from_status="", to_status="draft", source="api")
-    )
+    db.add(LetterEvent(letter_id=letter.id, from_status="", to_status="draft", source="api"))
     return letter, quote
 
 
@@ -362,7 +360,13 @@ def start_checkout(
 
 
 def record_webhook(
-    db: Session, *, provider: str, event_id: str, event_type: str, body: bytes, letter_id: str | None
+    db: Session,
+    *,
+    provider: str,
+    event_id: str,
+    event_type: str,
+    body: bytes,
+    letter_id: str | None,
 ) -> bool:
     """Record the event. Returns False if it has already been seen.
 
@@ -386,9 +390,7 @@ def record_webhook(
     return True
 
 
-def handle_payment_event(
-    db: Session, *, settings: Settings, event: PaymentEvent
-) -> Letter | None:
+def handle_payment_event(db: Session, *, settings: Settings, event: PaymentEvent) -> Letter | None:
     """Apply a verified payment event. The only path to `paid`."""
     if event.kind is PaymentEventKind.IGNORED:
         return None
@@ -413,8 +415,10 @@ def handle_payment_event(
         return letter
 
     if event.kind is PaymentEventKind.PAID:
-        if LetterStatus(letter.status) in {LetterStatus.PAID, LetterStatus.SUBMITTING} or \
-                LetterStatus(letter.status) == LetterStatus.SUBMITTED:
+        if (
+            LetterStatus(letter.status) in {LetterStatus.PAID, LetterStatus.SUBMITTING}
+            or LetterStatus(letter.status) == LetterStatus.SUBMITTED
+        ):
             return letter  # already handled
         # Refuse a payment whose amount is not the amount we quoted.
         if event.amount_cents is not None and event.amount_cents != letter.quoted_cents:
@@ -653,7 +657,7 @@ def _fail_and_refund(
 
 def find_retryable(db: Session, *, older_than_minutes: int = 5) -> list[Letter]:
     """Letters that are paid but unmailed, or stuck mid-submission."""
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)
+    cutoff = datetime.now(UTC) - timedelta(minutes=older_than_minutes)
     return list(
         db.execute(
             select(Letter).where(
@@ -677,7 +681,7 @@ def purge_expired(db: Session, *, now: datetime | None = None) -> int:
     a cooldown and a do-not-mail request. Everything that could reconstruct the
     letter is cleared.
     """
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     rows = db.execute(
         select(Letter).where(
             Letter.purged.is_(False),

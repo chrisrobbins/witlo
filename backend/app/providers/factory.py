@@ -29,7 +29,7 @@ def build_mail_provider(settings: Settings) -> MailProvider:
         return MockMailProvider()
 
     if settings.mail_provider == "lob":
-        from app.providers.lob import LobMailProvider  # noqa: PLC0415
+        from app.providers.lob import LobMailProvider
 
         return LobMailProvider(
             api_key=settings.lob_api_key,
@@ -52,7 +52,7 @@ def build_payment_provider(settings: Settings) -> PaymentProvider | None:
         return MockPaymentProvider()
 
     if settings.payment_provider == "stripe":
-        from app.payments.stripe_provider import StripePaymentProvider  # noqa: PLC0415
+        from app.payments.stripe_provider import StripePaymentProvider
 
         return StripePaymentProvider(
             secret_key=settings.stripe_secret_key,
@@ -62,7 +62,9 @@ def build_payment_provider(settings: Settings) -> PaymentProvider | None:
     raise ConfigurationError(f"Unknown PAYMENT_PROVIDER: {settings.payment_provider!r}")
 
 
-def assert_consistent(mail: MailProvider, payment: PaymentProvider | None, settings: Settings) -> None:
+def assert_consistent(
+    mail: MailProvider, payment: PaymentProvider | None, settings: Settings
+) -> None:
     """Cross-checks that no configuration can charge without being able to mail."""
     if settings.app_mode == "live" and not mail.can_send_real_mail:
         raise ConfigurationError(
@@ -71,8 +73,7 @@ def assert_consistent(mail: MailProvider, payment: PaymentProvider | None, setti
         )
     if payment is not None and payment.can_charge_real_money and not mail.can_send_real_mail:
         raise ConfigurationError(
-            "Refusing to start: this configuration can charge real money but cannot "
-            "send real mail."
+            "Refusing to start: this configuration can charge real money but cannot send real mail."
         )
     if settings.app_mode != "live" and mail.can_send_real_mail:
         raise ConfigurationError(

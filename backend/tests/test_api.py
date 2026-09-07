@@ -93,7 +93,7 @@ def test_creating_a_draft_returns_the_letter_and_a_priced_quote(client) -> None:
     assert body["id"].startswith("ltr_")
     assert body["status"] == "draft"
     assert "Hello from a neighbor," in body["letterText"]
-    assert body["quote"]["totalCents"] == sum(l["cents"] for l in body["quote"]["lines"])
+    assert body["quote"]["totalCents"] == sum(line["cents"] for line in body["quote"]["lines"])
     assert body["quote"]["totalCents"] > 0
 
 
@@ -221,9 +221,11 @@ def test_a_replayed_payment_webhook_is_accepted_but_not_processed_twice(client) 
     with SessionLocal() as db:
         from app.db.models import WebhookEvent
 
-        events = db.execute(
-            select(WebhookEvent).where(WebhookEvent.event_id == "evt_dupe")
-        ).scalars().all()
+        events = (
+            db.execute(select(WebhookEvent).where(WebhookEvent.event_id == "evt_dupe"))
+            .scalars()
+            .all()
+        )
         assert len(events) == 1
 
 
@@ -312,21 +314,25 @@ def test_nothing_in_this_configuration_can_send_real_mail(client) -> None:
 
 
 def test_a_live_deployment_wired_to_the_mock_refuses_to_start() -> None:
+    from pydantic import ValidationError
+
     from app.core.config import Settings
     from app.providers.factory import ConfigurationError, build_mail_provider
 
-    settings = Settings(
-        app_mode="live",
-        mail_provider="mock",
-        address_pepper="a-real-pepper-value",
-        lob_api_key="live_x",
-        lob_webhook_secret="s",
-        return_line1="1 Main",
-        return_city="Marfa",
-        return_state="TX",
-        return_zip="79843",
-    )
-    with pytest.raises(ConfigurationError):
+    # The refusal may fire at config-load time (a Settings validator) or when the
+    # provider is built; either is "refuses to start".
+    with pytest.raises((ConfigurationError, ValidationError)):
+        settings = Settings(
+            app_mode="live",
+            mail_provider="mock",
+            address_pepper="a-real-pepper-value",
+            lob_api_key="live_x",
+            lob_webhook_secret="s",
+            return_line1="1 Main",
+            return_city="Marfa",
+            return_state="TX",
+            return_zip="79843",
+        )
         build_mail_provider(settings)
 
 

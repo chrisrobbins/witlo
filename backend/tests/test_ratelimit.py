@@ -7,12 +7,12 @@ rather than per-process.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.ratelimit import check_and_consume, purge_old_buckets
 from app.db.session import SessionLocal
 
-NOW = datetime(2026, 9, 7, 12, 30, 45, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 7, 12, 30, 45, tzinfo=UTC)
 
 
 def test_a_bucket_allows_exactly_its_limit(db) -> None:
@@ -62,6 +62,6 @@ def test_a_limit_of_zero_disables_the_check_rather_than_blocking_everything(db) 
 
 def test_old_windows_can_be_swept_up(db) -> None:
     check_and_consume(db, "old", 5, 3600, now=NOW - timedelta(days=10))
-    check_and_consume(db, "new", 5, 3600, now=datetime.now(timezone.utc))
+    check_and_consume(db, "new", 5, 3600, now=datetime.now(UTC))
     db.commit()
     assert purge_old_buckets(db, older_than_days=2) == 1

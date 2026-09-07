@@ -64,9 +64,7 @@ STATUS_LABELS: dict[str, str] = {
 
 
 def _service_error(exc: mailing.ServiceError) -> HTTPException:
-    return HTTPException(
-        status_code=exc.status_code, detail={"code": exc.code, "detail": str(exc)}
-    )
+    return HTTPException(status_code=exc.status_code, detail={"code": exc.code, "detail": str(exc)})
 
 
 # --------------------------------------------------------------------------
@@ -200,12 +198,17 @@ def checkout(
     if not idempotency_key or len(idempotency_key) > 120:
         raise HTTPException(
             status_code=400,
-            detail={"code": "idempotency_required", "detail": "An Idempotency-Key header is required."},
+            detail={
+                "code": "idempotency_required",
+                "detail": "An Idempotency-Key header is required.",
+            },
         )
 
     letter = db.get(Letter, letter_id)
     if letter is None:
-        raise HTTPException(status_code=404, detail={"code": "not_found", "detail": "No such letter."})
+        raise HTTPException(
+            status_code=404, detail={"code": "not_found", "detail": "No such letter."}
+        )
 
     try:
         result = mailing.start_checkout(
@@ -230,7 +233,9 @@ def checkout(
 def letter_status(letter_id: str, db: Session = Depends(get_db)) -> schemas.LetterStatusOut:
     letter = db.get(Letter, letter_id)
     if letter is None:
-        raise HTTPException(status_code=404, detail={"code": "not_found", "detail": "No such letter."})
+        raise HTTPException(
+            status_code=404, detail={"code": "not_found", "detail": "No such letter."}
+        )
 
     return schemas.LetterStatusOut(
         id=letter.id,
@@ -297,7 +302,8 @@ async def payments_webhook(
         # A bad signature is the one webhook case that must not return 200.
         log.warning("rejected payment webhook: %s", exc)
         raise HTTPException(
-            status_code=400, detail={"code": "invalid_signature", "detail": "Signature check failed."}
+            status_code=400,
+            detail={"code": "invalid_signature", "detail": "Signature check failed."},
         ) from exc
     except ValueError as exc:
         raise HTTPException(
@@ -328,7 +334,8 @@ async def mail_webhook(
     except MailProviderError as exc:
         log.warning("rejected mail webhook: %s", exc)
         raise HTTPException(
-            status_code=400, detail={"code": "invalid_signature", "detail": "Signature check failed."}
+            status_code=400,
+            detail={"code": "invalid_signature", "detail": "Signature check failed."},
         ) from exc
     except ValueError as exc:
         raise HTTPException(
@@ -351,7 +358,7 @@ def _submit_in_background(letter_id: str) -> None:
             mailing.submit_letter(
                 db, settings=settings, mail=mail, payments=payments, letter=letter
             )
-        except Exception:  # noqa: BLE001 - background tasks must not crash the worker
+        except Exception:
             log.exception("submission failed for letter %s", letter_id)
 
 

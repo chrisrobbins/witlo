@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from html import escape
 
-from .composer import BulletList, LetterDocument, Paragraph
+from .composer import LetterDocument, Paragraph
 
 #: Lob prints the recipient block through an envelope window on the first page,
 #: so the top of page one must stay clear. 2.5 inches is their published
@@ -22,8 +22,8 @@ ADDRESS_WINDOW_INCHES = 2.5
 PONZU_SVG = (
     '<svg viewBox="0 0 250 150" width="78" xmlns="http://www.w3.org/2000/svg">'
     '<defs><clipPath id="pz"><path d="M52 94C44 78 50 62 66 59L72 47 79 58L88 44 95 57'
-    'L106 42 113 56L123 43 130 55L139 41 146 53C154 50 162 49 172 51C188 54 205 59 223 66'
-    'C232 70 232 79 223 81C212 84 202 86 193 88C184 95 173 100 161 101L78 105C62 105 56 100 52 94Z"/>'
+    "L106 42 113 56L123 43 130 55L139 41 146 53C154 50 162 49 172 51C188 54 205 59 223 66"
+    'C232 70 232 79 223 81C212 84 202 86 193 88C184 95 173 100 161 101L78 105C62 105 56 100 52 94Z"/>'  # noqa: E501
     "</clipPath></defs>"
     '<g fill="#3a352d">'
     '<path d="M74 98h11v33a5.5 5.5 0 0 1-11 0z" opacity="0.45"/>'
@@ -32,7 +32,7 @@ PONZU_SVG = (
     '<path d="M155 55C156 42 164 37 171 43L176 57Z"/>'
     '<path d="M179 57C181 45 189 41 196 47L200 61Z"/>'
     '<path d="M52 94C44 78 50 62 66 59L72 47 79 58L88 44 95 57L106 42 113 56L123 43 130 55'
-    'L139 41 146 53C154 50 162 49 172 51C188 54 205 59 223 66C232 70 232 79 223 81'
+    "L139 41 146 53C154 50 162 49 172 51C188 54 205 59 223 66C232 70 232 79 223 81"
     'C212 84 202 86 193 88C184 95 173 100 161 101L78 105C62 105 56 100 52 94Z"/>'
     '<path d="M92 100h11v32a5.5 5.5 0 0 1-11 0z"/>'
     '<path d="M162 98h11v33a5.5 5.5 0 0 1-11 0z"/>'
@@ -64,7 +64,10 @@ _CSS = """
     border-radius: 50%%; background: #8d4433;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
-  .signoff { margin-top: 1.3em; display: flex; justify-content: space-between; align-items: flex-end; gap: 1.2rem; }
+  .signoff {
+    margin-top: 1.3em; display: flex; justify-content: space-between;
+    align-items: flex-end; gap: 1.2rem;
+  }
   .signoff p { margin: 0; }
   .signoff .name { font-style: italic; margin-top: 0.3em; }
   figure { margin: 0; text-align: center; max-width: 1.5in; color: #555; }
@@ -92,7 +95,7 @@ def render_letter_html(doc: LetterDocument) -> str:
             body_parts.append(f'<p class="lead">{esc(block.lead)}</p><ul>{items}</ul>')
 
     return (
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         f"<title>{esc(doc.signoff_name)}</title>"
         f"<style>{_CSS % {'window': ADDRESS_WINDOW_INCHES}}</style>"
         "</head><body>"

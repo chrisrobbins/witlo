@@ -62,8 +62,16 @@ PAID_STATES: frozenset[LetterStatus] = frozenset(
 COUNTS_TOWARD_COOLDOWN: frozenset[LetterStatus] = PAID_STATES
 
 ALLOWED: dict[LetterStatus, frozenset[LetterStatus]] = {
+    # FAILED is reachable directly so a payment event that arrives before the
+    # draft was moved to PENDING_PAYMENT (e.g. a wrong-amount charge) can still
+    # be held for review rather than crashing the webhook handler.
     LetterStatus.DRAFT: frozenset(
-        {LetterStatus.PENDING_PAYMENT, LetterStatus.PAID, LetterStatus.CANCELED}
+        {
+            LetterStatus.PENDING_PAYMENT,
+            LetterStatus.PAID,
+            LetterStatus.CANCELED,
+            LetterStatus.FAILED,
+        }
     ),
     # PENDING_PAYMENT -> PAID is the only way money is recognised, and only a
     # verified webhook performs it.
@@ -101,7 +109,9 @@ ALLOWED: dict[LetterStatus, frozenset[LetterStatus]] = {
 }
 
 
-class InvalidTransition(Exception):
+# Named without an -Error suffix on purpose: it is part of this module's API and
+# reads as `raise InvalidTransition(current, target)`.
+class InvalidTransition(Exception):  # noqa: N818
     def __init__(self, current: LetterStatus, target: LetterStatus) -> None:
         super().__init__(f"Cannot move a letter from {current} to {target}.")
         self.current = current

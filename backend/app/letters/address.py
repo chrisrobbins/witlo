@@ -20,9 +20,67 @@ from hashlib import sha256
 _NON_ALNUM = re.compile(r"[^A-Z0-9]+")
 
 US_STATE_CODES = frozenset(
-    """AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT
-    NE NV NH NJ NM NY NC ND OH OK OR PA PR RI SC SD TN TX UT VT VA WA WV WI WY
-    AS GU MP VI AA AE AP""".split()
+    [
+        "AL",
+        "AK",
+        "AZ",
+        "AR",
+        "CA",
+        "CO",
+        "CT",
+        "DE",
+        "DC",
+        "FL",
+        "GA",
+        "HI",
+        "ID",
+        "IL",
+        "IN",
+        "IA",
+        "KS",
+        "KY",
+        "LA",
+        "ME",
+        "MD",
+        "MA",
+        "MI",
+        "MN",
+        "MS",
+        "MO",
+        "MT",
+        "NE",
+        "NV",
+        "NH",
+        "NJ",
+        "NM",
+        "NY",
+        "NC",
+        "ND",
+        "OH",
+        "OK",
+        "OR",
+        "PA",
+        "PR",
+        "RI",
+        "SC",
+        "SD",
+        "TN",
+        "TX",
+        "UT",
+        "VT",
+        "VA",
+        "WA",
+        "WV",
+        "WI",
+        "WY",
+        "AS",
+        "GU",
+        "MP",
+        "VI",
+        "AA",
+        "AE",
+        "AP",
+    ]
 )
 
 _ZIP_RE = re.compile(r"^\d{5}(-\d{4})?$")
@@ -37,7 +95,7 @@ class UsAddress:
     state: str
     zip: str
 
-    def normalized(self) -> "UsAddress":
+    def normalized(self) -> UsAddress:
         return UsAddress(
             line1=" ".join(self.line1.split()),
             line2=" ".join(self.line2.split()),
