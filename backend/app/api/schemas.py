@@ -35,7 +35,7 @@ class AddressIn(BaseModel):
         )
 
     @classmethod
-    def from_domain(cls, address: DomainAddress) -> "AddressIn":
+    def from_domain(cls, address: DomainAddress) -> AddressIn:
         return cls(
             line1=address.line1,
             line2=address.line2,

@@ -32,9 +32,9 @@ class MockPaymentProvider:
     def create_checkout_session(self, request: CheckoutRequest) -> CheckoutSession:
         # Derived from the idempotency key, so retrying a confirmation returns
         # the same session id rather than a second one.
-        session_id = "cs_mock_" + hashlib.sha256(
-            request.idempotency_key.encode("utf-8")
-        ).hexdigest()[:24]
+        session_id = (
+            "cs_mock_" + hashlib.sha256(request.idempotency_key.encode("utf-8")).hexdigest()[:24]
+        )
         return CheckoutSession(
             provider=self.name,
             session_id=session_id,
@@ -48,7 +48,11 @@ class MockPaymentProvider:
         del headers
         payload = json.loads(body.decode("utf-8"))
         kind_raw = str(payload.get("kind", "paid"))
-        kind = PaymentEventKind(kind_raw) if kind_raw in set(PaymentEventKind) else PaymentEventKind.IGNORED
+        kind = (
+            PaymentEventKind(kind_raw)
+            if kind_raw in set(PaymentEventKind)
+            else PaymentEventKind.IGNORED
+        )
         return PaymentEvent(
             provider=self.name,
             event_id=str(payload.get("id", "evt_mock")),

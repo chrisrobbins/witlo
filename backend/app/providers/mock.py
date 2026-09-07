@@ -95,12 +95,10 @@ class MockMailProvider:
         if "provider down" in haystack:
             raise MailProviderError("The mailing provider is unavailable.", retryable=True)
         if "provider reject" in haystack:
-            raise MailProviderError(
-                "The mailing provider refused this letter.", retryable=False
-            )
+            raise MailProviderError("The mailing provider refused this letter.", retryable=False)
 
         seed = hashlib.sha256(request.idempotency_key.encode("utf-8")).hexdigest()
-        # Deterministic 4–8 business-day estimate derived from the key.
+        # Deterministic 4-8 business-day estimate derived from the key.
         offset = 4 + int(seed[:2], 16) % 5
         key = normalize_address_key(request.to_address)
         days = (int(hashlib.sha256(key.encode()).hexdigest()[:4], 16) % 400) + offset

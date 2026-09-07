@@ -262,9 +262,12 @@ describe('progress', () => {
   it('announces the current step', async () => {
     const user = userEvent.setup();
     renderWizard();
-    expect(screen.getByText(/Step 1 of 4/)).toBeInTheDocument();
+    // The polite live region in <Stepper> announces "Step N of 4: <label>".
+    // The visible eyebrow reads "Step N of 4" with no colon, so match the colon
+    // to target the announcement specifically.
+    expect(screen.getByText(/Step 1 of 4:/)).toBeInTheDocument();
     await fillAddress(user);
     await user.click(nextButton());
-    expect(screen.getByText(/Step 2 of 4/)).toBeInTheDocument();
+    expect(screen.getByText(/Step 2 of 4:/)).toBeInTheDocument();
   });
 });

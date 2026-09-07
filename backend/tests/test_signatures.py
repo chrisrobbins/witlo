@@ -22,9 +22,7 @@ BODY = b'{"id":"evt_1","type":"checkout.session.completed"}'
 
 
 def _sign(secret: str, timestamp: str, body: bytes) -> str:
-    return hmac.new(
-        secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256
-    ).hexdigest()
+    return hmac.new(secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256).hexdigest()
 
 
 def _rejects(fn, *args, **kwargs) -> str:

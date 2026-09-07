@@ -56,7 +56,7 @@ class StripePaymentProvider:
 
     def _stripe(self) -> Any:
         try:
-            import stripe  # noqa: PLC0415 - imported lazily on purpose
+            import stripe
         except ImportError as exc:  # pragma: no cover - dependency is pinned
             raise PaymentError(
                 "The stripe package is not installed but PAYMENT_PROVIDER=stripe.",
@@ -100,7 +100,7 @@ class StripePaymentProvider:
                 # returns the original session instead of a second charge.
                 idempotency_key=request.idempotency_key,
             )
-        except Exception as exc:  # noqa: BLE001 - SDK raises a wide family
+        except Exception as exc:
             raise PaymentError(f"Stripe refused to open a checkout session: {exc}") from exc
 
         if not session.get("url"):
@@ -165,7 +165,7 @@ class StripePaymentProvider:
                 # Safe to retry: Stripe will not refund twice for one key.
                 idempotency_key=f"refund_{payment_reference}",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise PaymentError(f"Stripe refund failed: {exc}") from exc
 
 

@@ -62,9 +62,13 @@ def test_shared_content_copies_are_identical() -> None:
     """A forgotten `sync-content` run must fail loudly, not ship two letters."""
     shared = (REPO_ROOT / "shared" / "letter_content.json").read_text("utf-8")
     backend_copy = CONTENT_PATH.read_text("utf-8")
-    frontend_copy = (
-        REPO_ROOT / "frontend" / "src" / "content" / "letter_content.json"
-    ).read_text("utf-8")
+    frontend_copy = (REPO_ROOT / "frontend" / "src" / "content" / "letter_content.json").read_text(
+        "utf-8"
+    )
 
-    assert backend_copy == shared, "backend letter_content.json is stale — run scripts/sync-content.mjs"
-    assert frontend_copy == shared, "frontend letter_content.json is stale — run scripts/sync-content.mjs"
+    assert backend_copy == shared, (
+        "backend letter_content.json is stale — run scripts/sync-content.mjs"
+    )
+    assert frontend_copy == shared, (
+        "frontend letter_content.json is stale — run scripts/sync-content.mjs"
+    )

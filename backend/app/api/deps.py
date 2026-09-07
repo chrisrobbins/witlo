@@ -42,12 +42,12 @@ def client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
         return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "0.0.0.0"
+    # A placeholder identifier for rate-limiting when the client is unknown, not
+    # a socket bind address.
+    return request.client.host if request.client else "0.0.0.0"  # noqa: S104
 
 
-def client_hash(
-    request: Request, settings: Settings = Depends(settings_dep)
-) -> str:
+def client_hash(request: Request, settings: Settings = Depends(settings_dep)) -> str:
     return hash_client_ip(client_ip(request), settings.address_pepper)
 
 
@@ -99,7 +99,7 @@ def verify_bot_token(token: str | None, settings: Settings) -> None:
             timeout=8.0,
         )
         ok = bool(response.json().get("success"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.error("turnstile verification error: %s", exc)
         raise HTTPException(
             status_code=503,

@@ -10,7 +10,7 @@ than the dependency-free runner.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -78,10 +78,16 @@ def _pay(db, settings, letter: Letter, *, event_id: str = "evt_pay_1", amount: i
 def test_a_draft_stores_the_letter_the_server_composed(db, settings) -> None:
     letter = _draft(db, settings)
     assert letter.status == LetterStatus.DRAFT.value
-    assert letter.letter_text.startswith(mailing.compose_letter(
-        LetterInput(address=ADDRESS, observations=["all_night"], suggestions=["shield"],
-                    date_iso=mailing.today_iso())
-    ).date)
+    assert letter.letter_text.startswith(
+        mailing.compose_letter(
+            LetterInput(
+                address=ADDRESS,
+                observations=["all_night"],
+                suggestions=["shield"],
+                date_iso=mailing.today_iso(),
+            )
+        ).date
+    )
     assert letter.letter_fingerprint == _fingerprint()
     assert letter.quoted_cents == settings.total_price_cents
 
@@ -177,7 +183,9 @@ def test_an_expired_checkout_cancels_an_unpaid_draft(db, settings) -> None:
 # --- checkout idempotency -------------------------------------------------
 
 
-def test_the_same_idempotency_key_returns_the_same_checkout_session(db, settings, providers) -> None:
+def test_the_same_idempotency_key_returns_the_same_checkout_session(
+    db, settings, providers
+) -> None:
     _, payments = providers
     letter = _draft(db, settings)
 
@@ -192,7 +200,9 @@ def test_the_same_idempotency_key_returns_the_same_checkout_session(db, settings
     assert first == second
 
 
-def test_reusing_an_idempotency_key_for_a_different_letter_is_refused(db, settings, providers) -> None:
+def test_reusing_an_idempotency_key_for_a_different_letter_is_refused(
+    db, settings, providers
+) -> None:
     _, payments = providers
     a = _draft(db, settings)
     b = _draft(db, settings, address=UsAddress("9 Highland Ave", "", "Somerville", "MA", "02143"))
@@ -285,7 +295,9 @@ def test_the_provider_idempotency_key_is_the_letter_id(db, settings, providers) 
 
 def test_a_retryable_provider_failure_returns_the_letter_to_paid(db, settings, providers) -> None:
     mail, payments = providers
-    letter = _draft(db, settings, address=UsAddress("5 Provider Down Ln", "", "Marfa", "TX", "79843"))
+    letter = _draft(
+        db, settings, address=UsAddress("5 Provider Down Ln", "", "Marfa", "TX", "79843")
+    )
     _pay(db, settings, letter)
 
     mailing.submit_letter(db, settings=settings, mail=mail, payments=payments, letter=letter)
@@ -297,7 +309,9 @@ def test_a_retryable_provider_failure_returns_the_letter_to_paid(db, settings, p
 
 def test_repeated_retryable_failures_eventually_fail_and_refund(db, settings, providers) -> None:
     mail, payments = providers
-    letter = _draft(db, settings, address=UsAddress("5 Provider Down Ln", "", "Marfa", "TX", "79843"))
+    letter = _draft(
+        db, settings, address=UsAddress("5 Provider Down Ln", "", "Marfa", "TX", "79843")
+    )
     _pay(db, settings, letter)
 
     for _ in range(mailing.MAX_SUBMIT_ATTEMPTS + 1):
@@ -306,7 +320,7 @@ def test_repeated_retryable_failures_eventually_fail_and_refund(db, settings, pr
 
     assert letter.status == LetterStatus.FAILED.value
     assert letter.refunded_at is not None
-    assert ("pi_1", ) == tuple(r[0] for r in payments.refunds)
+    assert tuple(r[0] for r in payments.refunds) == ("pi_1",)
     assert "refunded in full" in letter.status_detail
 
 
@@ -359,7 +373,7 @@ def test_a_template_change_after_approval_stops_the_letter(db, settings, provide
 def test_find_retryable_picks_up_stuck_letters(db, settings) -> None:
     letter = _draft(db, settings)
     _pay(db, settings, letter)
-    letter.updated_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    letter.updated_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
     stuck = mailing.find_retryable(db)
@@ -399,7 +413,9 @@ def test_provider_events_advance_the_status(db, settings, providers) -> None:
         assert letter.status == expected.value
 
 
-def test_an_out_of_order_provider_event_does_not_move_the_letter_backwards(db, settings, providers) -> None:
+def test_an_out_of_order_provider_event_does_not_move_the_letter_backwards(
+    db, settings, providers
+) -> None:
     mail, payments = providers
     letter = _draft(db, settings)
     _pay(db, settings, letter)
@@ -423,7 +439,9 @@ def test_an_out_of_order_provider_event_does_not_move_the_letter_backwards(db, s
     assert letter.status == LetterStatus.PROCESSED_FOR_DELIVERY.value
 
 
-def test_an_unrecognised_provider_event_is_recorded_but_changes_nothing(db, settings, providers) -> None:
+def test_an_unrecognised_provider_event_is_recorded_but_changes_nothing(
+    db, settings, providers
+) -> None:
     mail, payments = providers
     letter = _draft(db, settings)
     _pay(db, settings, letter)
@@ -471,9 +489,7 @@ def test_an_unpaid_draft_does_not_start_a_cooldown(db, settings) -> None:
 def test_the_cooldown_expires(db, settings) -> None:
     first = _draft(db, settings)
     _pay(db, settings, first)
-    first.created_at = datetime.now(timezone.utc) - timedelta(
-        days=settings.repeat_address_cooldown_days + 1
-    )
+    first.created_at = datetime.now(UTC) - timedelta(days=settings.repeat_address_cooldown_days + 1)
     db.commit()
 
     assert _draft(db, settings).id
@@ -499,7 +515,7 @@ def test_the_lifetime_cap_stops_an_address_being_written_to_forever(db, settings
     for index in range(settings.max_letters_per_address_lifetime):
         letter = _draft(db, settings)
         _pay(db, settings, letter, event_id=f"evt_life_{index}")
-        letter.created_at = datetime.now(timezone.utc) - timedelta(days=400)
+        letter.created_at = datetime.now(UTC) - timedelta(days=400)
         db.commit()
 
     with pytest.raises(mailing.ServiceError) as exc:
@@ -510,7 +526,9 @@ def test_the_lifetime_cap_stops_an_address_being_written_to_forever(db, settings
 # --- retention ------------------------------------------------------------
 
 
-def test_retention_erases_the_letter_but_keeps_the_hash_and_outcome(db, settings, providers) -> None:
+def test_retention_erases_the_letter_but_keeps_the_hash_and_outcome(
+    db, settings, providers
+) -> None:
     mail, payments = providers
     letter = _draft(db, settings)
     _pay(db, settings, letter)
@@ -519,7 +537,7 @@ def test_retention_erases_the_letter_but_keeps_the_hash_and_outcome(db, settings
 
     hashed = letter.address_hash
     purged = mailing.purge_expired(
-        db, now=datetime.now(timezone.utc) + timedelta(days=settings.retention_days + 1)
+        db, now=datetime.now(UTC) + timedelta(days=settings.retention_days + 1)
     )
     db.commit()
     db.refresh(letter)
@@ -539,6 +557,6 @@ def test_retention_leaves_letters_that_are_not_due(db, settings, providers) -> N
     _pay(db, settings, letter)
     mailing.submit_letter(db, settings=settings, mail=mail, payments=payments, letter=letter)
 
-    assert mailing.purge_expired(db, now=datetime.now(timezone.utc)) == 0
+    assert mailing.purge_expired(db, now=datetime.now(UTC)) == 0
     db.refresh(letter)
     assert letter.to_line1 == ADDRESS.line1

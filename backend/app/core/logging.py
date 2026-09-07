@@ -28,7 +28,7 @@ class RedactionFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             message = record.getMessage()
-        except Exception:  # noqa: BLE001 - logging must never raise
+        except Exception:
             return True
         redacted = _STREET.sub("[address]", message)
         redacted = _EMAIL.sub("[email]", redacted)
@@ -41,9 +41,7 @@ class RedactionFilter(logging.Filter):
 
 def configure_logging(level: str = "INFO") -> None:
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)-8s %(name)s :: %(message)s")
-    )
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(name)s :: %(message)s"))
     handler.addFilter(RedactionFilter())
 
     root = logging.getLogger()

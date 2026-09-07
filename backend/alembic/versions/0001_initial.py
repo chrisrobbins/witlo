@@ -13,6 +13,7 @@ The unique constraints created here are load-bearing, not hygiene:
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0001_initial"
@@ -115,12 +116,15 @@ def upgrade() -> None:
     op.create_table(
         "suppressions",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("address_hash", sa.String(length=64), nullable=False, unique=True),
+        sa.Column("address_hash", sa.String(length=64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("source", sa.String(length=32), nullable=False, server_default="web"),
         sa.Column("note", sa.Text(), nullable=False, server_default=""),
     )
-    op.create_index("ix_suppressions_address_hash", "suppressions", ["address_hash"])
+    # `Suppression.address_hash` is `unique=True, index=True`, which SQLAlchemy
+    # models as a single unique index — not a plain index plus a separate
+    # UNIQUE constraint. Match that here or autogenerate reports drift.
+    op.create_index("ix_suppressions_address_hash", "suppressions", ["address_hash"], unique=True)
 
     op.create_table(
         "rate_limit_buckets",

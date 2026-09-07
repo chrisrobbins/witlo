@@ -79,12 +79,30 @@ def test_letter_never_contains_contact_details_or_a_from_block() -> None:
 def test_letter_avoids_enforcement_language() -> None:
     doc = _compose(
         observations=["all_night", "upward", "spill", "unused_area"],
-        suggestions=["turn_off", "timer", "motion_sensor", "shield", "lower_brightness", "warmer_color"],
+        suggestions=[
+            "turn_off",
+            "timer",
+            "motion_sensor",
+            "shield",
+            "lower_brightness",
+            "warmer_color",
+        ],
     )
     text = doc.plain_text.lower()
     banned = [
-        "illegal", "unlawful", "violation", "ordinance", "code enforcement", "police",
-        "lawsuit", "penalty", "citation", "fined", "prosecut", "must ", "required to",
+        "illegal",
+        "unlawful",
+        "violation",
+        "ordinance",
+        "code enforcement",
+        "police",
+        "lawsuit",
+        "penalty",
+        "citation",
+        "fined",
+        "prosecut",
+        "must ",
+        "required to",
     ]
     for word in banned:
         assert not re.search(rf"\b{re.escape(word.strip())}", text), (
@@ -95,7 +113,7 @@ def test_letter_avoids_enforcement_language() -> None:
 def test_note_is_sanitized_and_appears_as_its_own_bullet() -> None:
     doc = _compose(observations=["other"], note="It <b>shines</b>\tinto\nthe bedroom")
     content = load_content()
-    bullets = [b for b in doc.blocks if isinstance(b, BulletList)][0].items
+    bullets = next(b for b in doc.blocks if isinstance(b, BulletList)).items
     assert bullets[-1] == f"{content['note_prefix']}It b shines /b into the bedroom"
     assert "<" not in doc.plain_text and ">" not in doc.plain_text
 
@@ -103,7 +121,7 @@ def test_note_is_sanitized_and_appears_as_its_own_bullet() -> None:
 def test_note_is_truncated_to_the_published_limit() -> None:
     long_note = "a" * (note_max_chars() + 250)
     doc = _compose(observations=["other"], note=long_note)
-    bullets = [b for b in doc.blocks if isinstance(b, BulletList)][0].items
+    bullets = next(b for b in doc.blocks if isinstance(b, BulletList)).items
     content = load_content()
     assert bullets[-1] == content["note_prefix"] + "a" * note_max_chars()
 
@@ -128,7 +146,9 @@ def test_fingerprint_changes_when_anything_changes() -> None:
     variants = [
         _compose(observations=["all_night"], suggestions=["timer"]),
         _compose(observations=["upward"], suggestions=["shield"]),
-        _compose(observations=["all_night", "other"], note="one more thing", suggestions=["shield"]),
+        _compose(
+            observations=["all_night", "other"], note="one more thing", suggestions=["shield"]
+        ),
         compose_letter(
             LetterInput(
                 address=UsAddress("415 W San Antonio St", "", "Marfa", "TX", "79843"),

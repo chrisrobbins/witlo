@@ -11,7 +11,7 @@ import json
 import time
 from datetime import date
 
-from app.core.security import _expected  # noqa: PLC2701 - test needs the exact scheme
+from app.core.security import _expected
 from app.letters.address import UsAddress
 from app.letters.composer import LetterInput, compose_letter
 from app.letters.render import esc, render_letter_html
@@ -59,9 +59,7 @@ def test_mock_recognises_its_documented_test_addresses() -> None:
         is Deliverability.UNDELIVERABLE
     )
     assert (
-        provider.verify_address(
-            UsAddress("1 Undeliverable Way", "", "Marfa", "TX", "79843")
-        ).status
+        provider.verify_address(UsAddress("1 Undeliverable Way", "", "Marfa", "TX", "79843")).status
         is Deliverability.UNDELIVERABLE
     )
     assert (
@@ -78,7 +76,9 @@ def test_mock_recognises_its_documented_test_addresses() -> None:
 
 def test_mock_standardization_only_trims_the_zip_and_uppercases_the_state() -> None:
     provider = MockMailProvider()
-    result = provider.verify_address(UsAddress("414 W San Antonio St", "", "Marfa", "tx", "79843-1234"))
+    result = provider.verify_address(
+        UsAddress("414 W San Antonio St", "", "Marfa", "tx", "79843-1234")
+    )
     assert result.standardized == UsAddress("414 W San Antonio St", "", "Marfa", "TX", "79843")
 
 
@@ -96,7 +96,9 @@ def test_mock_send_is_deterministic_and_keyed_on_the_letter_id() -> None:
 def test_mock_failure_addresses_distinguish_retryable_from_permanent() -> None:
     provider = MockMailProvider()
     try:
-        provider.send_letter(_send_request(UsAddress("5 Provider Down Ln", "", "Marfa", "TX", "79843")))
+        provider.send_letter(
+            _send_request(UsAddress("5 Provider Down Ln", "", "Marfa", "TX", "79843"))
+        )
     except MailProviderError as exc:
         assert exc.retryable is True
     else:  # pragma: no cover
@@ -204,7 +206,9 @@ def test_a_completed_session_that_is_not_yet_paid_is_ignored() -> None:
         {
             "id": "evt_2",
             "type": "checkout.session.completed",
-            "data": {"object": {"id": "cs_2", "payment_status": "unpaid", "client_reference_id": "ltr_2"}},
+            "data": {
+                "object": {"id": "cs_2", "payment_status": "unpaid", "client_reference_id": "ltr_2"}
+            },
         }
     )
     assert provider.parse_webhook(headers, body).kind is PaymentEventKind.IGNORED
@@ -224,7 +228,13 @@ def test_async_success_failure_and_expiry_are_each_distinct() -> None:
             {
                 "id": f"evt_{event_type}",
                 "type": event_type,
-                "data": {"object": {"id": "cs_x", "payment_status": "paid", "client_reference_id": "ltr_x"}},
+                "data": {
+                    "object": {
+                        "id": "cs_x",
+                        "payment_status": "paid",
+                        "client_reference_id": "ltr_x",
+                    }
+                },
             }
         )
         assert provider.parse_webhook(headers, body).kind is expected, event_type
