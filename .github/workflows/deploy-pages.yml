@@ -1,0 +1,133 @@
+name: Deploy frontend to GitHub Pages
+
+# Publishes the static React app. GitHub Pages cannot run Python, so this
+# workflow deploys the frontend only; the API is deployed separately (see
+# docs/DEPLOYMENT.md).
+#
+# Configure once in Settings → Pages: set "Source" to "GitHub Actions".
+#
+# Two repository variables control the build (Settings → Secrets and variables
+# → Actions → Variables). Neither is a secret, and nothing secret belongs here:
+# every VITE_* value is inlined into JavaScript that anyone can read.
+#
+#   CUSTOM_DOMAIN      e.g. www.whyisthislighton.com. Set it and the site is
+#                      served from the domain root, and a CNAME file is written.
+#                      Leave it unset and the site is served from
+#                      https://<owner>.github.io/<repo>/ with a matching base path.
+#
+#   API_BASE_URL       The deployed API's origin, e.g. https://api.whyisthislighton.com
+#                      LEAVE IT UNSET to publish in demo mode, which is the safe
+#                      default: no backend, no mailing, no payments.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'shared/**'
+      - 'scripts/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; never cancel a run that is mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        # `npm ci` needs a lockfile; on a first run there may not be one yet.
+        run: npm ci || npm install
+
+      - name: Check the letter content is in sync
+        run: node scripts/sync-content.mjs --check
+
+      - name: Check the TypeScript and Python letters still agree
+        run: node scripts/gen-parity.mjs --check
+
+      - name: Type check
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      - name: Resolve the base path
+        id: base
+        run: |
+          if [ -n "${{ vars.CUSTOM_DOMAIN }}" ]; then
+            echo "path=/" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=/${GITHUB_REPOSITORY#*/}/" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_BASE_PATH: ${{ steps.base.outputs.path }}
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          VITE_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+        run: npm run build
+
+      - name: Confirm no secret leaked into the bundle
+        working-directory: frontend
+        # A build-time guard, not a substitute for keeping secrets server-side.
+        run: |
+          if grep -rEl 'sk_live_|sk_test_[A-Za-z0-9]{20}|whsec_[A-Za-z0-9]{20}|live_[a-f0-9]{32}' dist/; then
+            echo "::error::A key-shaped string is present in the built bundle. Failing the deploy."
+            exit 1
+          fi
+          echo "No key-shaped strings found in dist/."
+
+      - name: Write CNAME for the custom domain
+        if: vars.CUSTOM_DOMAIN != ''
+        run: echo "${{ vars.CUSTOM_DOMAIN }}" > frontend/dist/CNAME
+
+      - name: Add .nojekyll
+        # Without this, Pages runs Jekyll and drops files beginning with an
+        # underscore — which Vite emits.
+        run: touch frontend/dist/.nojekyll
+
+      - name: Report what was built
+        run: |
+          if [ -z "${{ vars.API_BASE_URL }}" ]; then
+            echo "### Published in DEMO MODE" >> "$GITHUB_STEP_SUMMARY"
+            echo "No API is configured, so this build cannot mail a letter or take a payment." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Published in LIVE MODE" >> "$GITHUB_STEP_SUMMARY"
+            echo "API: \`${{ vars.API_BASE_URL }}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "Confirm that origin's CORS allows this site, and that the API is in the mode you expect." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Base path: \`${{ steps.base.outputs.path }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

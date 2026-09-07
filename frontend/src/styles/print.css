@@ -1,0 +1,131 @@
+/* --- Print ----------------------------------------------------------------
+   "Print / save as PDF" from the preview screen produces exactly the letter
+   and nothing else: no navigation, no buttons, no demo banner, no dark
+   background burning through a printer's ink.
+--------------------------------------------------------------------------- */
+
+@page {
+  size: Letter portrait;
+  margin: 0.7in;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .sky,
+  .site-header,
+  .site-footer,
+  .demo-banner,
+  .no-print,
+  .stepper,
+  .wizard__actions,
+  .sheet-toolbar,
+  .skip-link {
+    display: none !important;
+  }
+
+  .app,
+  .app__main,
+  .wrap,
+  .wrap-narrow,
+  .wizard,
+  .wizard__grid,
+  .section {
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .sheet-scroll {
+    overflow: visible !important;
+  }
+
+  .sheet {
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    font-size: 10.4pt !important;
+    line-height: 1.46 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Tighten the furniture so a typical letter lands on a single sheet:
+     the mailing provider charges per page, and one page is also friendlier
+     to open. */
+  .sheet__date {
+    margin-bottom: 1.1em !important;
+  }
+
+  .sheet__to {
+    margin-bottom: 1.3em !important;
+  }
+
+  .sheet__signoff {
+    margin-top: 1.2em !important;
+  }
+
+  .sheet__mascot svg {
+    width: 74px !important;
+  }
+
+  .sheet__footer {
+    margin-top: 1.2em !important;
+    font-size: 8pt !important;
+  }
+
+  .sheet__footer,
+  .sheet__date,
+  .sheet__to span:first-child,
+  .sheet__mascot {
+    color: #444 !important;
+  }
+
+  .sheet__list li::before {
+    background: #8d4433 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet__body {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .sheet__signoff,
+  .sheet__footer {
+    break-inside: avoid;
+  }
+
+  a,
+  a:visited {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+}
+
+.print-only {
+  display: none;
+}

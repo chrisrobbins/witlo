@@ -1,0 +1,261 @@
+/* --- The letter sheet -----------------------------------------------------
+   Always light, always paper. This is the one part of the app that must look
+   the same on screen and on a US Letter page, so it is sized in inches and
+   carries its own colour scheme rather than inheriting the night palette.
+--------------------------------------------------------------------------- */
+
+.sheet-frame {
+  position: relative;
+}
+
+.sheet-scroll {
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+
+.sheet {
+  color-scheme: light;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-family: var(--font-letter);
+  font-size: 11.5pt;
+  line-height: 1.52;
+  width: 100%;
+  max-width: 8.5in;
+  min-height: 11in;
+  margin-inline: auto;
+  padding: 0.9in 0.85in 0.8in;
+  border-radius: 3px;
+  border: 1px solid var(--paper-edge);
+  box-shadow: var(--shadow-paper);
+}
+
+@media (max-width: 720px) {
+  .sheet {
+    font-size: 10.5pt;
+    padding: 1.5rem 1.35rem;
+    min-height: 0;
+  }
+}
+
+.sheet p,
+.sheet ul {
+  max-width: none;
+}
+
+.sheet__date {
+  color: var(--paper-ink-muted);
+  margin-bottom: 1.6em;
+  font-size: 10.5pt;
+}
+
+.sheet__to {
+  margin-bottom: 1.8em;
+  line-height: 1.45;
+}
+
+.sheet__to span {
+  display: block;
+}
+
+.sheet__to span:first-child {
+  color: var(--paper-ink-muted);
+  font-size: 10pt;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.35em;
+}
+
+.sheet__salutation {
+  margin-bottom: 1.2em;
+}
+
+/* Spacing lives on the children themselves: a blanket `p { margin: 0 }` here
+   would out-specify a `> * + *` rule and silently collapse the paragraphs. */
+.sheet__body > p,
+.sheet__body > div {
+  margin: 0 0 1.05em;
+}
+
+.sheet__body > :last-child {
+  margin-bottom: 0;
+}
+
+.sheet__body p {
+  text-wrap: pretty;
+}
+
+.sheet__list-lead {
+  margin: 0 0 0.5em;
+}
+
+.sheet__list {
+  margin: 0 0 0 0;
+  padding-left: 1.15em;
+  list-style: none;
+}
+
+.sheet__list li {
+  position: relative;
+  margin: 0 0 0.5em;
+  padding-left: 0.15em;
+}
+
+.sheet__list li::before {
+  content: '';
+  position: absolute;
+  left: -0.95em;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--clay-500);
+}
+
+.sheet__signoff {
+  margin-top: 1.8em;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sheet__signoff-text p {
+  margin: 0;
+}
+
+.sheet__signoff-name {
+  font-style: italic;
+  margin-top: 0.35em !important;
+}
+
+.sheet__mascot {
+  flex: none;
+  text-align: center;
+  color: var(--paper-ink-muted);
+  max-width: 9.5rem;
+}
+
+.sheet__mascot figcaption {
+  font-size: 8.5pt;
+  line-height: 1.35;
+  margin-top: 0.3em;
+  font-style: italic;
+}
+
+.sheet__footer {
+  margin-top: 2em;
+  padding-top: 0.85em;
+  border-top: 1px solid var(--paper-edge);
+  font-family: var(--font-body);
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: var(--paper-ink-muted);
+}
+
+.sheet__footer p {
+  margin: 0;
+}
+
+/* Fold marks: a small, quiet nod to a real mailed page. */
+.sheet__fold {
+  position: absolute;
+  left: -10px;
+  width: 8px;
+  border-top: 1px solid var(--line);
+  opacity: 0.5;
+}
+
+/* Preview chrome (screen only) */
+.sheet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.sheet-toolbar__meta {
+  font-size: var(--step--1);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sheet-fingerprint {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: rgba(234, 223, 204, 0.08);
+  border: 1px solid var(--line);
+  color: var(--cream-300);
+}
+
+.envelope-preview {
+  background: var(--paper);
+  color: var(--paper-ink);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-sm);
+  padding: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  box-shadow: var(--shadow);
+}
+
+.envelope-preview__label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* --- Collapsed preview on the home page ----------------------------------- */
+
+.sheet-peek {
+  position: relative;
+}
+
+.sheet-peek[data-expanded='false'] .sheet-scroll {
+  max-height: 30rem;
+  overflow: hidden;
+}
+
+.sheet-peek[data-expanded='false']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12rem;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(11, 16, 32, 0) 0%, var(--bg) 88%);
+}
+
+.sheet-peek__toggle {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin-top: calc(var(--space-5) * -1);
+}
+
+.sheet-peek[data-expanded='true'] .sheet-peek__toggle {
+  margin-top: var(--space-5);
+}
+
+@media print {
+  .sheet-peek[data-expanded='false'] .sheet-scroll {
+    max-height: none;
+  }
+  .sheet-peek::after {
+    display: none;
+  }
+}

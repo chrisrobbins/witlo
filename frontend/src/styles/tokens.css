@@ -1,0 +1,111 @@
+/* ---------------------------------------------------------------------------
+   Why Is This Light On? — design tokens
+   West Texas night sky: deep midnight blue, warm cream, muted terracotta,
+   restrained gold. Every foreground/background pair used for text in the app
+   is checked against WCAG AA (4.5:1 body, 3:1 large) — see docs/DESIGN.md.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* --- Night ------------------------------------------------------------ */
+  --night-900: #070b18; /* the sky at the zenith */
+  --night-800: #0b1020; /* page background */
+  --night-700: #111830; /* raised surface */
+  --night-600: #18203c; /* card */
+  --night-500: #222c4e; /* hairline / hover */
+  --night-400: #33406b;
+
+  /* --- Cream / paper ---------------------------------------------------- */
+  --cream-50: #fefaf3;
+  --cream-100: #f7efe0;
+  --cream-200: #eadfcc; /* body text on night */
+  --cream-300: #cfc3ad;
+  --cream-400: #a1957f; /* muted text on night — 4.6:1 on --night-800 */
+
+  /* --- Terracotta ------------------------------------------------------- */
+  --clay-600: #8d4433;
+  --clay-500: #b45a42;
+  --clay-400: #cf7256; /* on night: 5.0:1 */
+  --clay-300: #e0937b;
+
+  /* --- Gold (restrained: accents, never large fields) -------------------- */
+  --gold-500: #c9a24a;
+  --gold-400: #e9c46a; /* on night-800: 10.2:1 */
+  --gold-300: #f2d894;
+
+  /* --- Semantic --------------------------------------------------------- */
+  --bg: var(--night-800);
+  --bg-raised: var(--night-700);
+  --bg-card: var(--night-600);
+  --text: var(--cream-200);
+  --text-strong: var(--cream-50);
+  --text-muted: var(--cream-400);
+  --accent: var(--gold-400);
+  --accent-ink: var(--night-900);
+  --clay: var(--clay-400);
+  --line: rgba(234, 223, 204, 0.14);
+  --line-strong: rgba(234, 223, 204, 0.28);
+  --focus: var(--gold-300);
+
+  --ok-400: #7fbf9a;
+  --warn-400: #e3b552;
+  --stop-400: #e58a72;
+
+  /* --- Paper (letter preview, always light) ----------------------------- */
+  --paper: #fdfaf4;
+  --paper-edge: #e6dcc9;
+  --paper-ink: #23201b;
+  --paper-ink-muted: #5d564b;
+
+  /* --- Type ------------------------------------------------------------- */
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
+    'Hoefler Text', Georgia, 'Times New Roman', serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-letter: 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --step--1: clamp(0.82rem, 0.79rem + 0.14vw, 0.9rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.09rem);
+  --step-1: clamp(1.2rem, 1.13rem + 0.34vw, 1.4rem);
+  --step-2: clamp(1.45rem, 1.33rem + 0.6vw, 1.85rem);
+  --step-3: clamp(1.8rem, 1.57rem + 1.1vw, 2.6rem);
+  --step-4: clamp(2.2rem, 1.75rem + 2.2vw, 3.8rem);
+
+  /* --- Space / shape ---------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 6.5rem;
+
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(3, 6, 15, 0.5);
+  --shadow: 0 12px 30px -12px rgba(3, 6, 15, 0.75);
+  --shadow-lg: 0 30px 70px -30px rgba(3, 6, 15, 0.9);
+  --shadow-paper: 0 24px 60px -24px rgba(3, 6, 15, 0.85), 0 2px 0 rgba(255, 255, 255, 0.35) inset;
+
+  --measure: 66ch;
+  --wrap: 74rem;
+  --wrap-narrow: 46rem;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 520ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0.01ms;
+    --dur: 0.01ms;
+    --dur-slow: 0.01ms;
+  }
+}

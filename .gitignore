@@ -1,0 +1,35 @@
+# --- secrets ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+
+# --- node ------------------------------------------------------------------
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# --- python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.db
+*.db-wal
+*.db-shm
+
+# --- local tooling output --------------------------------------------------
+# The offline preview builder and the browser checks (tools/) write here.
+.preview/
+.shots/
+
+# --- editors / os ----------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+*.swp

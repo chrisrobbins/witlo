@@ -1,0 +1,98 @@
+{
+  "version": "1.1.0",
+  "_comment": "Single source of truth for every word that can appear in a mailed letter. Synced into frontend/src/content and backend/app/letters by scripts/sync-content.mjs. Both the TypeScript and Python composers read this file and must produce byte-identical output for the same inputs (see the parity tests).",
+
+  "service": {
+    "name": "Why Is This Light On?",
+    "url": "whyisthislighton.com",
+    "opt_out_path": "whyisthislighton.com/#/no-more-letters"
+  },
+
+  "recipient_line": "To the resident or property manager",
+  "salutation": "Hello from a neighbor,",
+
+  "paragraphs": {
+    "opening": "Someone who lives nearby noticed an outdoor light at this address and wanted to pass along some friendly information. This is not a complaint, nothing is being reported to anyone, and there is nothing you need to answer.",
+
+    "acknowledgment": "Outdoor lighting does real work. It helps people find steps and doorways, it supports safety and accessibility, and it can matter a great deal to how safe someone feels at home. A neighbor walking past has no way of knowing what a particular light is for, so nothing here is a judgment about whether yours is needed.",
+
+    "explanation": "The reason for writing is light pollution, which DarkSky International defines as the human-made alteration of outdoor light levels from those occurring naturally. When light escapes upward or sideways instead of landing where it is useful, it adds to the glow above a town, spills onto neighboring property, and disrupts animals that depend on real darkness. By DarkSky's estimate, about 80 percent of the world's population now lives under sky glow. The hopeful part is that light pollution is one of the few kinds of pollution that reverses the moment its cause changes: turn a light down, and the sky above you is darker that same night.",
+
+    "closing": "Thank you for reading this far. Whatever you decide is entirely up to you, and a light that turns out to be needed is a light that is doing its job. Even considering the question is appreciated."
+  },
+
+  "observations_lead": "Here is what a neighbor noticed, from the street and on one occasion:",
+  "observations_none": "No specific detail was recorded; a neighbor simply wanted to share this information with the households nearby.",
+
+  "observations": {
+    "all_night": {
+      "label": "Appears to stay on all night",
+      "bullet": "The light appeared to stay on through the night."
+    },
+    "upward": {
+      "label": "Shines upward",
+      "bullet": "Some of the light appeared to travel upward, into the sky, rather than down toward the ground."
+    },
+    "spill": {
+      "label": "Spills beyond the property",
+      "bullet": "Some of the light appeared to reach past the property and onto neighboring land or the street."
+    },
+    "unused_area": {
+      "label": "Lights an area that appears unused",
+      "bullet": "The light appeared to fall on an area that was not in use at the time."
+    },
+    "other": {
+      "label": "Something else",
+      "bullet": ""
+    }
+  },
+
+  "note_prefix": "A neighbor also noted: ",
+
+  "suggestions_lead": "If any of the following are practical at this address, they can make a real difference without giving up the light you rely on:",
+  "suggestions_lead_single": "One idea, if it happens to be practical at this address:",
+
+  "suggestions": {
+    "turn_off": {
+      "label": "Turn off lights when they are not needed",
+      "bullet": "Switch the light off when no one is outside. DarkSky's first principle of responsible outdoor lighting is simply to use light only if it is needed."
+    },
+    "timer": {
+      "label": "Use a timer",
+      "bullet": "Put the fixture on a timer so it covers the hours people are actually coming and going, and rests for the rest of the night."
+    },
+    "motion_sensor": {
+      "label": "Use motion sensors where appropriate",
+      "bullet": "Where a light is there for security, a motion sensor often works better than a light left on: a sudden change draws far more attention than a steady glow, and the fixture is dark the rest of the time."
+    },
+    "shield": {
+      "label": "Shield or aim fixtures downward",
+      "bullet": "A shielded fixture, or one aimed downward, keeps the light on the ground where it is useful instead of sending it into the sky or a neighbor's window. This is often the single change with the largest effect."
+    },
+    "lower_brightness": {
+      "label": "Use lower brightness",
+      "bullet": "A dimmer or a lower-output bulb is usually enough. Eyes adjust to darkness surprisingly well, and less glare often means seeing more, not less."
+    },
+    "warmer_color": {
+      "label": "Consider warmer light",
+      "bullet": "When a bulb needs replacing, a warmer color helps. DarkSky recommends outdoor lighting of 3000 kelvin or lower, which scatters less in the night air and is easier on both people and wildlife."
+    }
+  },
+
+  "signoff_line": "With warm regards,",
+  "signoff_name": "A neighbor, by way of Why Is This Light On?",
+
+  "mascot_caption": "Ponzu the javelina says: the stars are still up there.",
+
+  "footer": "This letter was sent through whyisthislighton.com, a small public-service project that helps neighbors share information about outdoor lighting. It was assembled from a template; a neighbor chose which observations and suggestions to include. The sender's identity and home address are not shared with you, no one has been reported to anyone, and no response is expected. If you would rather not receive letters like this again, visit whyisthislighton.com/#/no-more-letters and we will add this address to our do-not-mail list.",
+
+  "limits": {
+    "note_max_chars": 200,
+    "max_suggestions": 6
+  },
+
+  "order": {
+    "observations": ["all_night", "upward", "spill", "unused_area"],
+    "suggestions": ["turn_off", "timer", "motion_sensor", "shield", "lower_brightness", "warmer_color"]
+  }
+}

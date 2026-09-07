@@ -1,0 +1,66 @@
+[
+  {
+    "name": "everything-empty",
+    "address": { "line1": "414 W San Antonio St", "line2": "", "city": "Marfa", "state": "TX", "zip": "79843" },
+    "observations": [],
+    "note": "",
+    "suggestions": [],
+    "dateIso": "2026-09-07"
+  },
+  {
+    "name": "typical",
+    "address": { "line1": "414 W San Antonio St", "line2": "", "city": "Marfa", "state": "TX", "zip": "79843" },
+    "observations": ["all_night", "upward"],
+    "note": "",
+    "suggestions": ["shield", "timer", "warmer_color"],
+    "dateIso": "2026-09-07"
+  },
+  {
+    "name": "single-suggestion-uses-singular-lead",
+    "address": { "line1": "9 Highland Ave", "line2": "Apt 4B", "city": "Somerville", "state": "MA", "zip": "02143" },
+    "observations": ["spill"],
+    "note": "",
+    "suggestions": ["shield"],
+    "dateIso": "2026-01-31"
+  },
+  {
+    "name": "note-included-and-ordering-normalized",
+    "address": { "line1": "1600 Amphitheatre Pkwy", "line2": "", "city": "Mountain View", "state": "CA", "zip": "94043-1351" },
+    "observations": ["unused_area", "all_night", "other"],
+    "note": "  The floodlight over   the back lot is on from dusk to dawn.  ",
+    "suggestions": ["warmer_color", "turn_off", "motion_sensor"],
+    "dateIso": "2026-12-25"
+  },
+  {
+    "name": "note-sanitization-strips-markup-and-control-chars",
+    "address": { "line1": "1 Infinite Loop", "line2": "Suite 100", "city": "Cupertino", "state": "ca", "zip": "95014" },
+    "observations": ["other"],
+    "note": "It <script>alert(1)</script> shines\tright\ninto the bedroom {window}",
+    "suggestions": ["lower_brightness"],
+    "dateIso": "2026-02-29"
+  },
+  {
+    "name": "note-truncated-at-limit",
+    "address": { "line1": "700 Pennsylvania Ave SE", "line2": "", "city": "Washington", "state": "DC", "zip": "20003" },
+    "observations": ["other"],
+    "note": "abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij abcdefghij",
+    "suggestions": ["turn_off"],
+    "dateIso": "2026-06-01"
+  },
+  {
+    "name": "all-observations-all-suggestions",
+    "address": { "line1": "301 N Highland St", "line2": "", "city": "Marfa", "state": "TX", "zip": "79843" },
+    "observations": ["other", "unused_area", "spill", "upward", "all_night"],
+    "note": "The pole light behind the building points across the street.",
+    "suggestions": ["warmer_color", "lower_brightness", "shield", "motion_sensor", "timer", "turn_off"],
+    "dateIso": "2026-07-04"
+  },
+  {
+    "name": "note-without-other-observation-is-ignored-by-caller",
+    "address": { "line1": "88 Mesa Rd", "line2": "", "city": "Terlingua", "state": "TX", "zip": "79852" },
+    "observations": ["all_night"],
+    "note": "",
+    "suggestions": ["timer", "motion_sensor"],
+    "dateIso": "2026-03-15"
+  }
+]

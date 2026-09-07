@@ -1,0 +1,50 @@
+# Local development: PostgreSQL plus the API, in demo configuration.
+#
+#   docker compose up --build
+#   docker compose exec api alembic upgrade head
+#
+# The frontend is not in here; run it with `npm run dev` in frontend/ so you get
+# hot reload. Point it at this API with VITE_API_BASE_URL=http://localhost:8000
+# in frontend/.env.local, or leave it blank to work on demo mode.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wittl
+      POSTGRES_PASSWORD: wittl
+      POSTGRES_DB: wittl
+    ports:
+      - "5432:5432"
+    volumes:
+      - wittl-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wittl -d wittl"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_MODE: demo
+      DATABASE_URL: postgresql+psycopg://wittl:wittl@db:5432/wittl
+      CORS_ALLOW_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      ADDRESS_PEPPER: local-development-pepper-not-a-secret
+      MAIL_PROVIDER: mock
+      PAYMENT_PROVIDER: mock
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  wittl-db:

@@ -1,0 +1,22 @@
+# Runtime dependencies, pinned exactly. This file is the lockfile: install with
+#   pip install -r requirements.txt
+# and nothing resolves differently between your machine, CI and production.
+#
+# To move a pin, change it here and run the test suite. Do not float versions;
+# an unattended service that mails paper and takes money should not be able to
+# pick up a different dependency on a redeploy.
+
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+gunicorn==23.0.0
+
+pydantic==2.11.4
+pydantic-settings==2.8.1
+email-validator==2.2.0
+
+SQLAlchemy==2.0.40
+alembic==1.15.2
+psycopg[binary]==3.2.6
+
+httpx==0.28.1
+stripe==11.6.0
