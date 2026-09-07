@@ -151,4 +151,8 @@ jobs:
         working-directory: backend
         run: |
           pip install pytest
-          pytest tests/test_parity.py -v
+          # --noconftest: this job installs only pytest, but tests/conftest.py
+          # imports the full app (pydantic, SQLAlchemy) at collection time and
+          # its autouse DB fixture would run here too. test_parity.py needs
+          # neither -- the composer is stdlib-only by design.
+          pytest --noconftest tests/test_parity.py -v
