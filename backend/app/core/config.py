@@ -15,7 +15,7 @@ from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AppMode = Literal["demo", "live"]
-MailProviderName = Literal["mock", "lob"]
+MailProviderName = Literal["mock", "postgrid"]
 PaymentProviderName = Literal["none", "mock", "stripe"]
 
 
@@ -46,9 +46,12 @@ class Settings(BaseSettings):
 
     # --- Mailing ----------------------------------------------------------
     mail_provider: MailProviderName = "mock"
-    lob_api_key: str = ""
-    lob_webhook_secret: str = ""
-    lob_use_test_key_only: bool = True
+    # PostGrid issues separate keys for Print & Mail and Address Verification.
+    # Leave the AV key blank to reuse the Print & Mail key.
+    postgrid_api_key: str = ""
+    postgrid_av_api_key: str = ""
+    postgrid_webhook_secret: str = ""
+    postgrid_use_test_key_only: bool = True
     # The return address printed on the envelope. Never the sender's.
     return_name: str = "Why Is This Light On?"
     return_line1: str = ""
@@ -95,11 +98,11 @@ class Settings(BaseSettings):
         problems: list[str] = []
         if self.mail_provider == "mock":
             problems.append("APP_MODE=live with MAIL_PROVIDER=mock would never mail anything")
-        if self.mail_provider == "lob":
-            if not self.lob_api_key:
-                problems.append("LOB_API_KEY is required")
-            if not self.lob_webhook_secret:
-                problems.append("LOB_WEBHOOK_SECRET is required")
+        if self.mail_provider == "postgrid":
+            if not self.postgrid_api_key:
+                problems.append("POSTGRID_API_KEY is required")
+            if not self.postgrid_webhook_secret:
+                problems.append("POSTGRID_WEBHOOK_SECRET is required")
             if not (
                 self.return_line1 and self.return_city and self.return_state and self.return_zip
             ):
@@ -134,8 +137,8 @@ class Settings(BaseSettings):
         return self.price_postage_cents + self.price_printing_cents + self.price_service_cents
 
     @property
-    def uses_live_lob_key(self) -> bool:
-        return self.lob_api_key.startswith("live_")
+    def uses_live_postgrid_key(self) -> bool:
+        return self.postgrid_api_key.startswith("live_")
 
     @property
     def uses_live_stripe_key(self) -> bool:

@@ -28,13 +28,14 @@ def build_mail_provider(settings: Settings) -> MailProvider:
             )
         return MockMailProvider()
 
-    if settings.mail_provider == "lob":
-        from app.providers.lob import LobMailProvider
+    if settings.mail_provider == "postgrid":
+        from app.providers.postgrid import PostGridMailProvider
 
-        return LobMailProvider(
-            api_key=settings.lob_api_key,
-            webhook_secret=settings.lob_webhook_secret,
-            allow_live_key=not settings.lob_use_test_key_only,
+        return PostGridMailProvider(
+            api_key=settings.postgrid_api_key,
+            webhook_secret=settings.postgrid_webhook_secret,
+            av_api_key=settings.postgrid_av_api_key or None,
+            allow_live_key=not settings.postgrid_use_test_key_only,
         )
 
     raise ConfigurationError(f"Unknown MAIL_PROVIDER: {settings.mail_provider!r}")

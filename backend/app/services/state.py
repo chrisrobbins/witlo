@@ -142,13 +142,19 @@ def is_chargeable(status: LetterStatus) -> bool:
 #: Mapping from the mailing provider's vocabulary to ours. Anything not listed
 #: is recorded as an event but does not move the letter's status — an unknown
 #: provider event must never be able to invent a state.
+# PostGrid reports an order lifecycle (`status`) and, for live US mail, a USPS
+# IMb tracking state (`imbStatus`). The provider flattens both into
+# `letter.<value>` event names. `completed` is PostGrid's ~10-12 day "probably
+# delivered" approximation; we map it no further than `processed_for_delivery`
+# because first-class mail has no delivery confirmation and this service never
+# claims one.
 PROVIDER_EVENT_STATUS: dict[str, LetterStatus] = {
     "letter.created": LetterStatus.SUBMITTED,
-    "letter.rendered_pdf": LetterStatus.SUBMITTED,
-    "letter.mailed": LetterStatus.IN_TRANSIT,
-    "letter.in_transit": LetterStatus.IN_TRANSIT,
-    "letter.in_local_area": LetterStatus.IN_LOCAL_AREA,
+    "letter.ready": LetterStatus.SUBMITTED,
+    "letter.printing": LetterStatus.SUBMITTED,
+    "letter.entered_mail_stream": LetterStatus.IN_TRANSIT,
+    "letter.out_for_delivery": LetterStatus.PROCESSED_FOR_DELIVERY,
     "letter.processed_for_delivery": LetterStatus.PROCESSED_FOR_DELIVERY,
-    "letter.re-routed": LetterStatus.IN_TRANSIT,
+    "letter.completed": LetterStatus.PROCESSED_FOR_DELIVERY,
     "letter.returned_to_sender": LetterStatus.RETURNED_TO_SENDER,
 }

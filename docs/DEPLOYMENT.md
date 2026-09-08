@@ -9,7 +9,7 @@ have something working:
 4. [The API and live mailing](#4-the-api) — the part that needs your credentials
 
 Steps 1 and 2 need nothing from you. Step 3 needs your DNS. Step 4 needs a
-Lob account, a Stripe account, and a host.
+PostGrid account, a Stripe account, and a host.
 
 ---
 
@@ -136,7 +136,7 @@ fly secrets set \
   APP_MODE=live \
   ADDRESS_PEPPER="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
   CORS_ALLOW_ORIGINS=https://www.whyisthislighton.com \
-  MAIL_PROVIDER=lob LOB_API_KEY=... LOB_WEBHOOK_SECRET=... \
+  MAIL_PROVIDER=postgrid POSTGRID_API_KEY=... POSTGRID_WEBHOOK_SECRET=... \
   PAYMENT_PROVIDER=stripe STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=...
 fly deploy
 fly ssh console -C "alembic upgrade head"
@@ -152,23 +152,37 @@ entrypoint.** Two replicas racing to migrate on every deploy is a bad day.
 
 ### 4b. Get a mailing provider
 
-[Lob](https://lob.com) is what the integration targets, because it does the
-three things this service needs from one vendor: US first-class letters, USPS
-address verification, and signed delivery-status webhooks.
+[PostGrid](https://postgrid.com) is what the integration targets: US first-class
+letters printed from the rendered HTML, USPS address verification, and signed
+delivery-status webhooks, on a self-serve account with no business-email
+requirement.
 
-1. Create an account. You get a **test** key (`test_…`) and a **live** key
-   (`live_…`). Start with test.
-2. Dashboard → Webhooks → add an endpoint at
-   `https://<your-api>/api/v1/webhooks/mail`, subscribed to the `letter.*`
-   events. Copy the signing secret into `LOB_WEBHOOK_SECRET`.
-3. Set a return address. Lob requires one on the envelope; the app uses the
+1. Sign up at [postgrid.com/sign-up](https://www.postgrid.com/sign-up/) and pick
+   the **Pay-Per-Piece** plan (no platform fee; address verification is
+   included). In the dashboard you get two keys for **Print & Mail** and two for
+   **Address Verification**, each `test_sk_…` (sandbox, never printed) and
+   `live_sk_…` (production).
+2. Put the Print & Mail key in `POSTGRID_API_KEY` and the Address Verification
+   key in `POSTGRID_AV_API_KEY` (leave the AV var blank to reuse the one key if
+   your account carries both scopes).
+3. Dashboard → Webhooks → add an endpoint at
+   `https://<your-api>/api/v1/webhooks/mail`, subscribed to `letter.created` and
+   `letter.updated`. **Set the payload format to JSON**, not the JWT default.
+   Copy the signing secret into `POSTGRID_WEBHOOK_SECRET`.
+4. Set a return address. PostGrid requires one on the envelope; the app uses the
    `RETURN_*` variables and **never** a sender's address. Use a PO box or a
    business address you are willing to publish, because it is printed on every
    letter and is how a recipient can write back.
 
-`LOB_USE_TEST_KEY_ONLY=true` is a deliberate guard rail: while it is true, the
-app refuses to start with a `live_` key. Set it to `false` only when you
+`POSTGRID_USE_TEST_KEY_ONLY=true` is a deliberate guard rail: while it is true,
+the app refuses to start with a `live_` key. Set it to `false` only when you
 genuinely intend to put paper in the mail.
+
+PostGrid has no local webhook-forwarding CLI. To exercise `/api/v1/webhooks/mail`
+before deploying, expose the local API with a tunnel
+(`cloudflared tunnel --url http://localhost:8000`) and point a sandbox webhook at
+`https://<tunnel>/api/v1/webhooks/mail`. Address verification and letter
+creation work against `localhost` directly with a `test_sk_…` key.
 
 ### 4c. Get Stripe working, in test mode
 
@@ -222,14 +236,14 @@ is a no-op while blank; once set, the draft endpoint requires a valid token.
 | # | Step | Where |
 |---|---|---|
 | 1 | Generate a permanent `ADDRESS_PEPPER` | your host's secrets |
-| 2 | `MAIL_PROVIDER=lob` with a **test** key | your host's secrets |
+| 2 | `MAIL_PROVIDER=postgrid` with **test** keys (Print & Mail + Address Verification) | your host's secrets |
 | 3 | `PAYMENT_PROVIDER=stripe` with **test** keys | your host's secrets |
-| 4 | Set both webhook endpoints and their signing secrets | Lob + Stripe dashboards |
+| 4 | Set both webhook endpoints and their signing secrets (PostGrid webhook: JSON format) | PostGrid + Stripe dashboards |
 | 5 | Set the `RETURN_*` address | your host's secrets |
 | 6 | Fill in the `[ … ]` placeholders on the Privacy and Terms pages | `frontend/src/routes/Legal.tsx` |
-| 7 | Check the prices against Lob's current rates | `PRICE_*` variables |
+| 7 | Check the prices against PostGrid's current rates | `PRICE_*` variables |
 | 8 | Send yourself a test letter, end to end | your own address |
-| 9 | `APP_MODE=live`, `LOB_USE_TEST_KEY_ONLY=false`, live keys | your host's secrets |
+| 9 | `APP_MODE=live`, `POSTGRID_USE_TEST_KEY_ONLY=false`, live keys | your host's secrets |
 | 10 | Set `API_BASE_URL` in the GitHub repository variables | GitHub |
 
 The app refuses to start if step 9 is done without steps 1–5, which is the
@@ -265,9 +279,10 @@ a key-shaped string appears in `dist/`.
 | `DATABASE_URL` | SQLite file | PostgreSQL in production. |
 | `CORS_ALLOW_ORIGINS` | `http://localhost:5173` | Comma-separated exact origins. Wildcards are rejected at startup. |
 | `ADDRESS_PEPPER` | dev value | **Permanent.** See the warning above. |
-| `MAIL_PROVIDER` | `mock` | `mock` or `lob`. |
-| `LOB_API_KEY` / `LOB_WEBHOOK_SECRET` | — | Required when `MAIL_PROVIDER=lob`. |
-| `LOB_USE_TEST_KEY_ONLY` | `true` | While true, a `live_` key is refused. |
+| `MAIL_PROVIDER` | `mock` | `mock` or `postgrid`. |
+| `POSTGRID_API_KEY` / `POSTGRID_WEBHOOK_SECRET` | — | Required when `MAIL_PROVIDER=postgrid`. Webhook must be JSON format. |
+| `POSTGRID_AV_API_KEY` | — | PostGrid's separate Address Verification key. Blank = reuse `POSTGRID_API_KEY`. |
+| `POSTGRID_USE_TEST_KEY_ONLY` | `true` | While true, a `live_` key is refused. |
 | `RETURN_NAME` / `RETURN_LINE1` / `RETURN_LINE2` / `RETURN_CITY` / `RETURN_STATE` / `RETURN_ZIP` | — | The service's own return address. Never a sender's. |
 | `PAYMENT_PROVIDER` | `none` | `none`, `mock` or `stripe`. |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | — | Required when `PAYMENT_PROVIDER=stripe`. |
@@ -284,7 +299,7 @@ a key-shaped string appears in `dist/`.
 
 - `MAIL_PROVIDER=mock` — it would take money and mail nothing
 - `PAYMENT_PROVIDER=mock` — it would mail letters nobody paid for
-- a missing `LOB_API_KEY`, `LOB_WEBHOOK_SECRET`, or `RETURN_*` address
+- a missing `POSTGRID_API_KEY`, `POSTGRID_WEBHOOK_SECRET`, or `RETURN_*` address
 - a missing `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET`
 - the default `ADDRESS_PEPPER`
 - a mailing provider that cannot send real mail (a test key, in live mode)
@@ -364,8 +379,12 @@ signature check failed — almost always the wrong `STRIPE_WEBHOOK_SECRET`, or a
 proxy that modified the request body. The body must reach the app byte-for-byte.
 
 **Letters stuck in `submitting`.** A worker died between claiming the letter and
-hearing back from Lob. The retry job clears these, and Lob's idempotency key
+hearing back from PostGrid. The retry job clears these, and the `Idempotency-Key`
 (the letter id) means a retry cannot produce a second envelope.
+
+**Mail webhook returns 400.** The signature did not verify. Usual causes: the
+wrong `POSTGRID_WEBHOOK_SECRET`, or the webhook was created in PostGrid's default
+JWT payload format — this integration needs it set to **JSON**.
 
 **The app will not start and says it is refusing.** Read the message; it lists
 every problem it found. This is the check working.
