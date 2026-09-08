@@ -7,7 +7,7 @@ verified, it says so.
 
 ## The short version
 
-The demo is finished and can be published to GitHub Pages today. The API is
+The demo is finished and can be deployed to Vercel today. The API is
 complete and its logic is tested; it has been exercised against PostGrid's
 sandbox (verify, create, re-submit) but never against a live key or Stripe.
 Nothing in this repository has printed a letter or moved any money.
@@ -29,8 +29,8 @@ Nothing in this repository has printed a letter or moved any money.
 | Download a self-contained HTML letter that works offline | ✅ |
 | A clear, permanent statement that nothing will be mailed | ✅ |
 | No payment control exists at all in demo mode | ✅ |
-| Hash routing — deep links and refreshes work on Pages with no rewrites | ✅ |
-| Project-URL and custom-domain base paths | ✅ |
+| Hash routing — deep links and refreshes work with no rewrite rules | ✅ |
+| Same-origin API — the frontend and `/api/*` are one Vercel deployment, no CORS | ✅ |
 | Keyboard operation, skip link, focus management between steps | ✅ |
 | `prefers-reduced-motion`, WCAG AA contrast, 44px tap targets | ✅ |
 | No horizontal scroll at 360px | ✅ |
@@ -147,8 +147,8 @@ Nothing here blocks the demo.
 |---|---|---|---|
 | 1 | **A PostGrid account** (Pay-Per-Piece plan) | Printing, postage, address verification, delivery webhooks | `POSTGRID_API_KEY`, `POSTGRID_AV_API_KEY`, `POSTGRID_WEBHOOK_SECRET` |
 | 2 | **A Stripe account** | Taking payment for postage | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
-| 3 | **A host for the API** | Pages cannot run Python | Fly.io or Render; see the deployment guide |
-| 4 | **A PostgreSQL database** | Production storage | `DATABASE_URL` |
+| 3 | **A Vercel project** | Hosts the frontend and the Python API together | one import at vercel.com/new |
+| 4 | **A Neon Postgres database** | Serverless has no disk; production storage | `DATABASE_URL` (pooled) |
 | 5 | **DNS for whyisthislighton.com** | The custom domain | Your registrar |
 | 6 | **A return address you own** | PostGrid requires one, and it is printed on every letter | `RETURN_*` |
 | 7 | **A generated `ADDRESS_PEPPER`** | Keys the address hashes. **Permanent** — changing it orphans every do-not-mail record | Your host's secrets |
@@ -166,7 +166,7 @@ Nothing here blocks the demo.
 | **Price** | $3.49 ($1.74 postage + $0.95 printing + $0.80 service) | **A placeholder.** PostGrid's Pay-Per-Piece rate for a US B&W first-class letter is roughly $1.02; check the current number and that it covers Stripe's fee before charging anyone. Set in `PRICE_*`. |
 | **Cooldown** | 180 days per address, 3 letters lifetime | Deliberately conservative. This is the main lever between "a public service" and "a way to bother someone repeatedly". |
 | **Retention** | 90 days, then erase | Long enough to answer "what did you send?" and settle a refund. |
-| **No `react-router`** | A ~90-line hash router | Pages needs nothing more, and it removed the only routing dependency. If you later want history-API URLs, you will want the library back and a `404.html` redirect. |
+| **No `react-router`** | A ~90-line hash router | Hash routing needs no server rewrites anywhere, and it removed the only routing dependency. If you later want history-API URLs, you will want the library back and a catch-all rewrite to `index.html`. |
 | **Own signature verification** | Not the vendor SDKs | Keeps the code that decides "we were paid" short, readable and testable without the vendor package. The Stripe SDK is still used for API calls. |
 | **Two-page maximum** | The template cannot exceed it | Pricing assumes it. Adding to the template risks a third page and a wrong price. |
 | **Sender email required for mailing** | Yes | For the receipt and the mailing status. Not required for the free print-it-yourself path. |
@@ -182,15 +182,6 @@ specifically so they cannot ship unnoticed. They are in
 
 **Have a lawyer read the Terms before you take money.** I wrote them to describe
 the software honestly; that is not the same as them being sound.
-
-### One environment note
-
-The build sandbox could not reach `pypi.org` or `registry.npmjs.org`, so
-`package-lock.json` and a pip lock file could not be generated here. Run
-`npm install` in `frontend/` once and commit the resulting `package-lock.json`;
-`backend/requirements.txt` is already exact-pinned and serves as the Python lock.
-CI is written to tolerate the missing lockfile on the first run (`npm ci ||
-npm install`) and will use it from then on.
 
 ---
 
@@ -219,11 +210,10 @@ npm install`) and will use it from then on.
 
 ## 6. If you only do three things
 
-1. **Publish the demo.** Settings → Pages → Source: GitHub Actions, then push.
-   It works today and needs nothing from you.
-2. **Run `npm install` in `frontend/` and commit the lockfile**, then let CI run
-   the 66 pytest tests and 50 Vitest cases that could not execute in the build
-   sandbox.
+1. **Deploy the demo.** Import the repo at [vercel.com/new](https://vercel.com/new),
+   set `VITE_API_BASE_URL=/`, deploy. It works today and needs no accounts.
+2. **Add Neon and run `POST /api/v1/internal/migrate`** once you want the API to
+   store anything.
 3. **Before charging anyone**, check the price against PostGrid's current rates
    and send yourself a test letter end to end, with a test key, at your own
    address.

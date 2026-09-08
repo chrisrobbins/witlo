@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     # --- Bot protection (optional) ----------------------------------------
     turnstile_secret_key: str = ""
 
+    # --- Internal ops (optional) ----------------------------------------
+    # Bearer token for the /api/v1/internal/* routes (the retry, purge and
+    # migrate jobs a scheduler calls). Blank disables the whole router.
+    cron_secret: str = ""
+
     @field_validator("cors_allow_origins")
     @classmethod
     def _no_wildcard(cls, value: str) -> str:

@@ -1,0 +1,3 @@
+# Vercel's Python runtime installs this at the repo root. The real, exact-pinned
+# list lives in backend/requirements.txt; this just points at it.
+-r backend/requirements.txt

@@ -8,17 +8,23 @@
  * hosted Checkout URL the server hands back.
  */
 
-const rawApiBase = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '');
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL ?? '').trim();
 
-export const API_BASE_URL: string = rawApiBase;
+/**
+ * `VITE_API_BASE_URL="/"` (or ".") means the API is served from this same
+ * origin — the single-project Vercel deployment, where requests go to
+ * `/api/v1/...` with no host. Any other non-empty value is an absolute origin.
+ */
+const sameOrigin = rawApiBase === '/' || rawApiBase === '.';
+
+export const API_BASE_URL: string = sameOrigin ? '' : rawApiBase.replace(/\/+$/, '');
 
 /**
  * Demo mode is the default and the safe state: no backend is configured, so the
  * app composes letters entirely in the browser and cannot mail or charge
- * anything. This is what GitHub Pages serves until you point the build at a
- * deployed API.
+ * anything. This is what a build with no `VITE_API_BASE_URL` serves.
  */
-export const IS_DEMO: boolean = rawApiBase.length === 0;
+export const IS_DEMO: boolean = !sameOrigin && API_BASE_URL.length === 0;
 
 export const SITE_NAME = 'Why Is This Light On?';
 export const SITE_URL = 'https://www.whyisthislighton.com';

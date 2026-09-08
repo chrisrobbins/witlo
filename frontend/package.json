@@ -3,11 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Static React front end for Why Is This Light On? — publishable to GitHub Pages, fully usable in demo mode with no backend.",
+  "description": "Static React front end for Why Is This Light On? — a Vite build served from the domain root, fully usable in demo mode with no backend.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "build:pages": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

@@ -1,10 +1,11 @@
 /**
  * Demo mode must not be able to mail a letter or take a payment.
  *
- * This is the single most important guarantee of the GitHub Pages build, so it
- * is asserted three ways: every API function refuses before doing anything;
- * `fetch` is never called; and the shipped source contains no payment or
- * mailing endpoint that could be reached without a configured API.
+ * This is the single most important guarantee of a build with no
+ * `VITE_API_BASE_URL`, so it is asserted three ways: every API function refuses
+ * before doing anything; `fetch` is never called; and the shipped source
+ * contains no payment or mailing endpoint that could be reached without a
+ * configured API.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -32,7 +33,7 @@ describe('demo mode', () => {
   });
 
   it('is the default when no API base URL is configured', () => {
-    // Vitest runs without VITE_API_BASE_URL set, which is the Pages default.
+    // Vitest runs without VITE_API_BASE_URL set — the demo-build default.
     expect(IS_DEMO).toBe(true);
     expect(isConfigured()).toBe(false);
   });
