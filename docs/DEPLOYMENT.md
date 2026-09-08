@@ -18,7 +18,7 @@ PostGrid account, a Stripe account, and a Postgres database (Neon).
 ## 1. Local development
 
 ```bash
-git clone <your repo> && cd whyisthislighton
+git clone <your repo> && cd witlo
 cd frontend && npm install && npm run dev
 ```
 
@@ -55,7 +55,7 @@ recurring jobs on a cron.
 
    ```
    VITE_API_BASE_URL = /
-   VITE_CONTACT_EMAIL = hello@whyisthislighton.com
+   VITE_CONTACT_EMAIL = hello@witlo.info
    ```
 
    `VITE_API_BASE_URL=/` means "the API is on this same origin". Leave it unset
@@ -79,8 +79,8 @@ shared URLs all work.
 
 ## 3. The custom domain
 
-**1.** Project → Settings → Domains → add `whyisthislighton.com` and
-`www.whyisthislighton.com`. Pick one as primary; Vercel 308-redirects the other
+**1.** Project → Settings → Domains → add `witlo.info` and
+`www.witlo.info`. Pick one as primary; Vercel 308-redirects the other
 to it.
 
 **2.** Point DNS at Vercel as it instructs — usually an `A` record for the apex
@@ -206,7 +206,7 @@ previews hitting real providers.
 APP_MODE                 = live          # keep at demo until 4f is done
 DATABASE_URL             = <from Neon; pooled>   # skip if the Neon integration set it
 ADDRESS_PEPPER           = <permanent; python -c "import secrets;print(secrets.token_urlsafe(48))">
-CORS_ALLOW_ORIGINS       = https://whyisthislighton.com,https://www.whyisthislighton.com
+CORS_ALLOW_ORIGINS       = https://witlo.info,https://www.witlo.info
 CRON_SECRET              = <python -c "import secrets;print(secrets.token_urlsafe(32))">
 
 MAIL_PROVIDER            = postgrid
@@ -218,8 +218,8 @@ POSTGRID_USE_TEST_KEY_ONLY = false       # only when you mean it
 PAYMENT_PROVIDER         = stripe
 STRIPE_SECRET_KEY        = sk_live_…
 STRIPE_WEBHOOK_SECRET    = whsec_…
-CHECKOUT_SUCCESS_URL     = https://whyisthislighton.com/#/receipt?letter={LETTER_ID}
-CHECKOUT_CANCEL_URL      = https://whyisthislighton.com/#/create
+CHECKOUT_SUCCESS_URL     = https://witlo.info/#/receipt?letter={LETTER_ID}
+CHECKOUT_CANCEL_URL      = https://witlo.info/#/create
 
 RETURN_NAME  = Why Is This Light On?
 RETURN_LINE1 = …
@@ -276,7 +276,7 @@ money and posts nothing.
 |---|---|---|
 | `VITE_API_BASE_URL` | *(empty)* | Empty = demo mode. `/` = same-origin API (the Vercel deployment). A full origin for a separately hosted API. |
 | `VITE_BASE_PATH` | `/` | Served from the domain root; only change to host the static build under a sub-path. |
-| `VITE_CONTACT_EMAIL` | `hello@whyisthislighton.com` | Shown on the privacy page. |
+| `VITE_CONTACT_EMAIL` | `hello@witlo.info` | Shown on the privacy page. |
 
 Nothing secret goes here, ever. Vite inlines these into JavaScript that anyone
 can read with View Source, and CI fails the build if a key-shaped string appears
@@ -376,8 +376,8 @@ at the wrong origin). It is a build-time value — redeploy after changing it.
 
 **Browser console: blocked by CORS.** Only happens if the API is on a different
 origin than the site. Add that origin to `CORS_ALLOW_ORIGINS` exactly, including
-scheme and subdomain — `https://www.whyisthislighton.com` and
-`https://whyisthislighton.com` are two different origins.
+scheme and subdomain — `https://www.witlo.info` and
+`https://witlo.info` are two different origins.
 
 **A cron endpoint returns 404.** `CRON_SECRET` is not set, which disables the
 whole `/api/v1/internal/*` router. A 401 there means the token is wrong.

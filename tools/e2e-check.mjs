@@ -188,7 +188,7 @@ async function fillAddress(page) {
   check('an unselected observation does not', !text.includes('reach past the property'));
   check('the note appears verbatim', text.includes('The floodlight shines across the road.'));
   check('a selected suggestion appears', text.includes('a motion sensor often works better'));
-  check('the letter names the service and the opt-out', text.includes('whyisthislighton.com') && text.includes('no-more-letters'));
+  check('the letter names the service and the opt-out', text.includes('witlo.info') && text.includes('no-more-letters'));
   check('the letter never invents a name', !text.includes('Dear '));
 
   check('print and download are both offered', (await page.getByRole('button', { name: /Print or save as PDF/ }).count()) === 1 && (await page.getByRole('button', { name: /Download the letter/ }).count()) === 1);

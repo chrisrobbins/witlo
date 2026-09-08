@@ -103,7 +103,7 @@ export function Privacy() {
         <h2>Recipients</h2>
         <p>
           Any recipient can put their address on the do-not-mail list at{' '}
-          <Link to="/no-more-letters">whyisthislighton.com/#/no-more-letters</Link>, or by writing
+          <Link to="/no-more-letters">witlo.info/#/no-more-letters</Link>, or by writing
           to the return address on the letter. That list is checked before anything is printed, it
           is stored as a hash, and there is no way to un-suppress an address from the public site.
         </p>

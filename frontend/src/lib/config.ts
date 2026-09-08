@@ -27,7 +27,7 @@ export const API_BASE_URL: string = sameOrigin ? '' : rawApiBase.replace(/\/+$/,
 export const IS_DEMO: boolean = !sameOrigin && API_BASE_URL.length === 0;
 
 export const SITE_NAME = 'Why Is This Light On?';
-export const SITE_URL = 'https://www.whyisthislighton.com';
+export const SITE_URL = 'https://witlo.info';
 
 /** Set by Vite from `VITE_BASE_PATH`; used for asset URLs, never for routing. */
 export const BASE_URL: string = import.meta.env.BASE_URL || '/';
@@ -38,7 +38,7 @@ export const BASE_URL: string = import.meta.env.BASE_URL || '/';
  */
 export const DEMO_PRICE_CENTS = 0;
 
-export const CONTACT_EMAIL = (import.meta.env.VITE_CONTACT_EMAIL ?? 'hello@whyisthislighton.com').trim();
+export const CONTACT_EMAIL = (import.meta.env.VITE_CONTACT_EMAIL ?? 'hello@witlo.info').trim();
 
 export function apiUrl(path: string): string {
   if (IS_DEMO) throw new Error('apiUrl called in demo mode');

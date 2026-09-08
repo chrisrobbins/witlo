@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     # --- Application ------------------------------------------------------
     app_mode: AppMode = "demo"
     app_name: str = "Why Is This Light On?"
-    public_site_url: str = "https://www.whyisthislighton.com"
-    contact_email: str = "hello@whyisthislighton.com"
+    public_site_url: str = "https://witlo.info"
+    contact_email: str = "hello@witlo.info"
     log_level: str = "INFO"
 
     # --- Database ---------------------------------------------------------
@@ -64,8 +64,8 @@ class Settings(BaseSettings):
     payment_provider: PaymentProviderName = "none"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
-    checkout_success_url: str = "https://www.whyisthislighton.com/#/receipt?letter={LETTER_ID}"
-    checkout_cancel_url: str = "https://www.whyisthislighton.com/#/create"
+    checkout_success_url: str = "https://witlo.info/#/receipt?letter={LETTER_ID}"
+    checkout_cancel_url: str = "https://witlo.info/#/create"
 
     # --- Pricing (server-side authority) ----------------------------------
     price_postage_cents: int = 174

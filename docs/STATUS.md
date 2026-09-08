@@ -149,7 +149,7 @@ Nothing here blocks the demo.
 | 2 | **A Stripe account** | Taking payment for postage | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
 | 3 | **A Vercel project** | Hosts the frontend and the Python API together | one import at vercel.com/new |
 | 4 | **A Neon Postgres database** | Serverless has no disk; production storage | `DATABASE_URL` (pooled) |
-| 5 | **DNS for whyisthislighton.com** | The custom domain | Your registrar |
+| 5 | **DNS for witlo.info** | The custom domain | Your registrar |
 | 6 | **A return address you own** | PostGrid requires one, and it is printed on every letter | `RETURN_*` |
 | 7 | **A generated `ADDRESS_PEPPER`** | Keys the address hashes. **Permanent** — changing it orphans every do-not-mail record | Your host's secrets |
 | 8 | **A Cloudflare Turnstile key** *(recommended)* | Bot protection once money is involved | `TURNSTILE_SECRET_KEY` |
