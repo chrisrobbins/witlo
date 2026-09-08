@@ -8,9 +8,9 @@ verified, it says so.
 ## The short version
 
 The demo is finished and can be published to GitHub Pages today. The API is
-complete and its logic is tested, but it has never spoken to PostGrid or Stripe,
-because that needs your accounts. Nothing in this repository has mailed a letter
-or moved any money.
+complete and its logic is tested; it has been exercised against PostGrid's
+sandbox (verify, create, re-submit) but never against a live key or Stripe.
+Nothing in this repository has printed a letter or moved any money.
 
 ---
 
@@ -119,13 +119,15 @@ a minimal letter and the longest one the template can produce.
 
 ### What is *not* tested
 
-- **PostGrid.** No API call has ever been made. The endpoint shapes, the
-  `Idempotency-Key` behaviour, the address-verification `status` values, and the
-  `letter.updated` / `imbStatus` webhook mapping are implemented from PostGrid's
-  documentation and covered by offline unit tests with a mock HTTP transport;
-  none of it is verified against a real response. Two things to confirm on first
-  contact: that the webhook is created in **JSON** (not JWT) payload format, and
-  whether the webhook `data` object carries `expectedDeliveryDate`.
+- **PostGrid — sandbox only.** Address verification, letter creation (with the
+  return address and rendered HTML), and idempotent re-submission have all been
+  run against PostGrid's real `test_sk_` sandbox and behave as the code expects;
+  `expectedDeliveryDate` is not returned there and is handled as absent. What is
+  *not* exercised: a `live_sk_` key, an actual printed letter, real CASS/DPV
+  verification (the sandbox marks every address `verified`), and the delivery
+  webhook against a live endpoint — the `letter.updated` / `imbStatus` mapping is
+  covered only by offline unit tests. When wiring the webhook, set its payload
+  format to **JSON**, not PostGrid's JWT default.
 - **Stripe.** Same. Signature verification is thoroughly tested against the
   documented algorithm; `checkout.Session.create` has never been called.
 - **A real letter.** Nothing has been printed or posted.

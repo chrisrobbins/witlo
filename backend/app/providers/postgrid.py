@@ -6,19 +6,22 @@ HTML document, USPS address verification, and signed delivery-status webhooks.
 
 Endpoints and semantics used here:
 
-  * `POST https://api.postgrid.com/v1/verifications` — address verification
-    (the Address Verification product; it has its own API key)
   * `POST https://api.postgrid.com/print-mail/v1/letters` — print and post, with
     an `Idempotency-Key` header that makes a retried submission return the letter
     PostGrid already created instead of a second one
+  * address verification: `POST https://api.postgrid.com/v1/addver/verifications`
+    when a dedicated Address Verification key is configured, otherwise a
+    `POST .../print-mail/v1/contacts` whose `addressStatus` carries the same
+    verified/corrected/failed result on the Print & Mail key alone
   * webhooks signed as `PostGrid-Signature: t=<unix>,v1=<hex>`, an HMAC-SHA256
     over `"{t}.{raw body}"`. The webhook must be created with the **JSON** payload
     format, not PostGrid's JWT default.
 
-Auth is the `x-api-key` header. PostGrid issues separate keys for Print & Mail
-and for Address Verification; both are `test_sk_…` in the sandbox and `live_sk_…`
-in production. A live key is refused unless the deployment explicitly allows one,
-and every request carries a timeout so a hanging provider cannot pin a worker.
+Auth is the `x-api-key` header. Keys are `test_sk_…` in the sandbox and
+`live_sk_…` in production; the sandbox creates letters and contacts but never
+prints them and marks every address `verified`. A live key is refused unless the
+deployment explicitly allows one, and every request carries a timeout so a
+hanging provider cannot pin a worker.
 """
 
 from __future__ import annotations
@@ -42,10 +45,10 @@ from .base import (
 )
 
 MAIL_ROOT = "https://api.postgrid.com/print-mail/v1"
-AV_ROOT = "https://api.postgrid.com/v1"
+AV_ROOT = "https://api.postgrid.com/v1/addver"
 TIMEOUT = httpx.Timeout(20.0, connect=8.0)
 
-#: PostGrid's address-verification `status` values, mapped onto ours. A
+#: PostGrid's address `status` / `addressStatus` values, mapped onto ours. A
 #: `corrected` result becomes NEEDS_UNIT when the correction it needed was a
 #: missing or wrong secondary unit; see `_needs_unit`.
 DELIVERABILITY_MAP = {
@@ -94,9 +97,12 @@ class PostGridMailProvider:
                 "real mail."
             )
         self._api_key = api_key
-        # PostGrid's Address Verification product has its own key; fall back to
-        # the Print & Mail key for accounts where one key carries both scopes.
-        self._av_api_key = av_api_key or api_key
+        # PostGrid's Address Verification is a separate product with its own key
+        # (`/v1/addver`). When one isn't configured, `verify_address` falls back
+        # to creating a Print & Mail contact and reading its `addressStatus` —
+        # which is what the Print & Mail key can do, and is real verification on
+        # a live key (the sandbox marks everything `verified`).
+        self._av_api_key = av_api_key or None
         self._webhook_secret = webhook_secret
         self._client = client or httpx.Client(timeout=TIMEOUT)
 
@@ -138,6 +144,34 @@ class PostGridMailProvider:
     # --- addresses ---------------------------------------------------------
 
     def verify_address(self, address: UsAddress) -> AddressVerification:
+        if self._av_api_key:
+            raw_status, fields, errors = self._verify_via_av_api(address)
+        else:
+            raw_status, fields, errors = self._verify_via_contact(address)
+
+        status = DELIVERABILITY_MAP.get(raw_status, Deliverability.UNDELIVERABLE)
+        if status is Deliverability.DELIVERABLE_WITH_CHANGES and _needs_unit(errors):
+            status = Deliverability.NEEDS_UNIT
+
+        standardized: UsAddress | None = None
+        if status is not Deliverability.UNDELIVERABLE:
+            standardized = UsAddress(
+                line1=str(fields.get("line1") or address.line1),
+                line2=str(fields.get("line2") or ""),
+                city=str(fields.get("city") or address.city),
+                state=str(fields.get("state") or address.state),
+                zip=str(fields.get("zip") or address.zip)[:5],
+            )
+
+        return AddressVerification(
+            status=status,
+            message=MESSAGES[status],
+            standardized=standardized,
+            provider=self.name,
+        )
+
+    def _verify_via_av_api(self, address: UsAddress) -> tuple[str, dict[str, str], Any]:
+        """The dedicated Address Verification product (`/v1/addver`)."""
         payload = {
             "address": {
                 k: v
@@ -152,29 +186,46 @@ class PostGridMailProvider:
                 if v
             }
         }
-        body = self._post(AV_ROOT, "/verifications", payload, api_key=self._av_api_key).json()
-        data = body.get("data") or {}
+        assert self._av_api_key is not None
+        response = self._post(AV_ROOT, "/verifications", payload, api_key=self._av_api_key)
+        data = response.json().get("data") or {}
+        return (
+            str(data.get("status", "failed")).lower(),
+            {
+                "line1": data.get("line1"),
+                "line2": data.get("line2"),
+                "city": data.get("city"),
+                "state": data.get("state"),
+                "zip": data.get("zipCode"),
+            },
+            data.get("errors"),
+        )
 
-        raw_status = str(data.get("status", "failed")).lower()
-        status = DELIVERABILITY_MAP.get(raw_status, Deliverability.UNDELIVERABLE)
-        if status is Deliverability.DELIVERABLE_WITH_CHANGES and _needs_unit(data.get("errors")):
-            status = Deliverability.NEEDS_UNIT
-
-        standardized: UsAddress | None = None
-        if status is not Deliverability.UNDELIVERABLE:
-            standardized = UsAddress(
-                line1=str(data.get("line1") or address.line1),
-                line2=str(data.get("line2") or ""),
-                city=str(data.get("city") or address.city),
-                state=str(data.get("state") or address.state),
-                zip=str(data.get("zipCode") or address.zip)[:5],
-            )
-
-        return AddressVerification(
-            status=status,
-            message=MESSAGES[status],
-            standardized=standardized,
-            provider=self.name,
+    def _verify_via_contact(self, address: UsAddress) -> tuple[str, dict[str, str], Any]:
+        """Fallback: a Print & Mail contact carries an `addressStatus` and the
+        standardised fields. Real verification on a live key; the sandbox marks
+        everything `verified`."""
+        payload = {
+            "firstName": "Resident",
+            "addressLine1": address.line1,
+            "city": address.city,
+            "provinceOrState": address.state,
+            "postalOrZip": address.zip,
+            "country": "US",
+        }
+        if address.line2:
+            payload["addressLine2"] = address.line2
+        c = self._post(MAIL_ROOT, "/contacts", payload, api_key=self._api_key).json()
+        return (
+            str(c.get("addressStatus", "failed")).lower(),
+            {
+                "line1": c.get("addressLine1"),
+                "line2": c.get("addressLine2"),
+                "city": c.get("city"),
+                "state": c.get("provinceOrState"),
+                "zip": c.get("postalOrZip"),
+            },
+            c.get("addressErrors") or c.get("errors"),
         )
 
     # --- sending ---------------------------------------------------------

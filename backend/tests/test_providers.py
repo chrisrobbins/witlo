@@ -284,13 +284,25 @@ def test_the_mock_payment_session_id_is_stable_for_one_idempotency_key() -> None
 PG_SECRET = "webhook_secret_pg"
 
 
-def _postgrid(handler) -> PostGridMailProvider:
+def _postgrid(handler, *, av_api_key: str | None = None) -> PostGridMailProvider:
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    return PostGridMailProvider("test_sk_x", PG_SECRET, client=client)
+    return PostGridMailProvider("test_sk_x", PG_SECRET, av_api_key=av_api_key, client=client)
 
 
 def _json(payload: dict, status: int = 200) -> httpx.Response:
     return httpx.Response(status, json=payload)
+
+
+def _contact(status: str, **overrides) -> dict:
+    body = {
+        "addressStatus": status,
+        "addressLine1": "414 W SAN ANTONIO ST",
+        "city": "MARFA",
+        "provinceOrState": "TX",
+        "postalOrZip": "79843",
+    }
+    body.update(overrides)
+    return body
 
 
 def test_a_postgrid_test_key_cannot_send_real_mail() -> None:
@@ -304,27 +316,22 @@ def test_postgrid_refuses_a_live_key_unless_explicitly_allowed() -> None:
         PostGridMailProvider("live_sk_x", PG_SECRET, allow_live_key=False)
 
 
-def test_postgrid_verify_address_maps_every_status() -> None:
+def test_postgrid_verify_via_contact_maps_the_address_status() -> None:
+    # No Address Verification key: verify by creating a Print & Mail contact.
     cases = {
         "verified": Deliverability.DELIVERABLE,
         "corrected": Deliverability.DELIVERABLE_WITH_CHANGES,
         "failed": Deliverability.UNDELIVERABLE,
     }
     for raw, expected in cases.items():
-        provider = _postgrid(
-            lambda r, raw=raw: _json(
-                {
-                    "data": {
-                        "status": raw,
-                        "line1": "414 W SAN ANTONIO ST",
-                        "city": "MARFA",
-                        "state": "TX",
-                        "zipCode": "79843",
-                    }
-                }
-            )
-        )
-        result = provider.verify_address(ADDRESS)
+        seen: dict = {}
+
+        def handler(request: httpx.Request, raw=raw, seen=seen) -> httpx.Response:
+            seen["path"] = request.url.path
+            return _json(_contact(raw), status=201)
+
+        result = _postgrid(handler).verify_address(ADDRESS)
+        assert seen["path"] == "/print-mail/v1/contacts"
         assert result.status is expected
         if expected is Deliverability.UNDELIVERABLE:
             assert result.standardized is None
@@ -334,19 +341,36 @@ def test_postgrid_verify_address_maps_every_status() -> None:
             )
 
 
-def test_postgrid_verify_address_flags_a_missing_unit_as_needs_unit() -> None:
-    provider = _postgrid(
-        lambda r: _json(
+def test_postgrid_verify_uses_the_av_api_when_a_key_is_configured() -> None:
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["path"] = request.url.path
+        seen["api_key"] = request.headers.get("x-api-key")
+        return _json(
             {
                 "data": {
                     "status": "corrected",
-                    "errors": {"line1": ["Missing secondary unit number"]},
-                    "line1": "1 Main St",
-                    "city": "Marfa",
+                    "line1": "414 W SAN ANTONIO ST",
+                    "city": "MARFA",
                     "state": "TX",
                     "zipCode": "79843",
                 }
             }
+        )
+
+    provider = _postgrid(handler, av_api_key="test_sk_av")
+    result = provider.verify_address(ADDRESS)
+    assert seen["path"] == "/v1/addver/verifications"
+    assert seen["api_key"] == "test_sk_av"
+    assert result.status is Deliverability.DELIVERABLE_WITH_CHANGES
+
+
+def test_postgrid_verify_flags_a_missing_unit_as_needs_unit() -> None:
+    provider = _postgrid(
+        lambda r: _json(
+            _contact("corrected", addressErrors={"line1": ["Missing secondary unit number"]}),
+            status=201,
         )
     )
     assert provider.verify_address(ADDRESS).status is Deliverability.NEEDS_UNIT

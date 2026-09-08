@@ -158,13 +158,14 @@ delivery-status webhooks, on a self-serve account with no business-email
 requirement.
 
 1. Sign up at [postgrid.com/sign-up](https://www.postgrid.com/sign-up/) and pick
-   the **Pay-Per-Piece** plan (no platform fee; address verification is
-   included). In the dashboard you get two keys for **Print & Mail** and two for
-   **Address Verification**, each `test_sk_…` (sandbox, never printed) and
-   `live_sk_…` (production).
-2. Put the Print & Mail key in `POSTGRID_API_KEY` and the Address Verification
-   key in `POSTGRID_AV_API_KEY` (leave the AV var blank to reuse the one key if
-   your account carries both scopes).
+   the **Pay-Per-Piece** plan (no platform fee). Grab the **Print & Mail** API
+   key — `test_sk_…` for the sandbox (letters are created but never printed),
+   `live_sk_…` for production — and put it in `POSTGRID_API_KEY`.
+2. *Optional but recommended:* PostGrid's **Address Verification** is a separate
+   product with its own key. Enable it and put its key in `POSTGRID_AV_API_KEY`
+   for real CASS/DPV verification. Left blank, the app verifies by creating a
+   Print & Mail contact and reading its `addressStatus` — which is real on a
+   `live_sk_` key but marks everything `verified` in the sandbox.
 3. Dashboard → Webhooks → add an endpoint at
    `https://<your-api>/api/v1/webhooks/mail`, subscribed to `letter.created` and
    `letter.updated`. **Set the payload format to JSON**, not the JWT default.
