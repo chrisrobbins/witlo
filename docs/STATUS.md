@@ -8,9 +8,9 @@ verified, it says so.
 ## The short version
 
 The demo is finished and can be published to GitHub Pages today. The API is
-complete and its logic is tested, but it has never spoken to Lob or Stripe,
-because that needs your accounts. Nothing in this repository has mailed a letter
-or moved any money.
+complete and its logic is tested; it has been exercised against PostGrid's
+sandbox (verify, create, re-submit) but never against a live key or Stripe.
+Nothing in this repository has printed a letter or moved any money.
 
 ---
 
@@ -43,9 +43,9 @@ or moved any money.
 | Standardized-address confirmation before purchase | ✅ |
 | Server-side pricing; the browser never proposes a price | ✅ |
 | Letter recomposed server-side and compared to the sender's fingerprint | ✅ |
-| Mailing-provider abstraction: deterministic mock + Lob | ✅ (Lob unexercised) |
+| Mailing-provider abstraction: deterministic mock + PostGrid | ✅ (PostGrid unexercised against the live API) |
 | Payment abstraction: mock + Stripe Checkout | ✅ (Stripe unexercised) |
-| Stripe and Lob webhook signature verification | ✅ tested thoroughly |
+| Stripe and PostGrid webhook signature verification | ✅ tested thoroughly |
 | Duplicate-event protection (unique constraint, not a query) | ✅ |
 | Idempotent checkout (stored response per key) | ✅ |
 | Idempotent submission (letter id as the provider's key) | ✅ |
@@ -119,9 +119,15 @@ a minimal letter and the longest one the template can produce.
 
 ### What is *not* tested
 
-- **Lob.** No API call has ever been made. Endpoint shapes, the idempotency
-  header, and the `deliverability` values are implemented from Lob's
-  documentation; the response parsing is not verified against a real response.
+- **PostGrid — sandbox only.** Address verification, letter creation (with the
+  return address and rendered HTML), and idempotent re-submission have all been
+  run against PostGrid's real `test_sk_` sandbox and behave as the code expects;
+  `expectedDeliveryDate` is not returned there and is handled as absent. What is
+  *not* exercised: a `live_sk_` key, an actual printed letter, real CASS/DPV
+  verification (the sandbox marks every address `verified`), and the delivery
+  webhook against a live endpoint — the `letter.updated` / `imbStatus` mapping is
+  covered only by offline unit tests. When wiring the webhook, set its payload
+  format to **JSON**, not PostGrid's JWT default.
 - **Stripe.** Same. Signature verification is thoroughly tested against the
   documented algorithm; `checkout.Session.create` has never been called.
 - **A real letter.** Nothing has been printed or posted.
@@ -139,12 +145,12 @@ Nothing here blocks the demo.
 
 | # | What | Why | Where it goes |
 |---|---|---|---|
-| 1 | **A Lob account** | Printing, postage, address verification, delivery webhooks | `LOB_API_KEY`, `LOB_WEBHOOK_SECRET` |
+| 1 | **A PostGrid account** (Pay-Per-Piece plan) | Printing, postage, address verification, delivery webhooks | `POSTGRID_API_KEY`, `POSTGRID_AV_API_KEY`, `POSTGRID_WEBHOOK_SECRET` |
 | 2 | **A Stripe account** | Taking payment for postage | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
 | 3 | **A host for the API** | Pages cannot run Python | Fly.io or Render; see the deployment guide |
 | 4 | **A PostgreSQL database** | Production storage | `DATABASE_URL` |
 | 5 | **DNS for whyisthislighton.com** | The custom domain | Your registrar |
-| 6 | **A return address you own** | Lob requires one, and it is printed on every letter | `RETURN_*` |
+| 6 | **A return address you own** | PostGrid requires one, and it is printed on every letter | `RETURN_*` |
 | 7 | **A generated `ADDRESS_PEPPER`** | Keys the address hashes. **Permanent** — changing it orphans every do-not-mail record | Your host's secrets |
 | 8 | **A Cloudflare Turnstile key** *(recommended)* | Bot protection once money is involved | `TURNSTILE_SECRET_KEY` |
 
@@ -156,8 +162,8 @@ Nothing here blocks the demo.
 
 | Decision | What I chose | Why, and what to consider |
 |---|---|---|
-| **Mailing provider** | Lob | The only one that gives US letters, USPS verification and signed webhooks from one vendor. The abstraction in `app/providers/base.py` is four methods; PostGrid or Click2Mail would be a new file, not a rewrite. |
-| **Price** | $3.49 ($1.74 postage + $0.95 printing + $0.80 service) | **A placeholder.** Check it against Lob's current rates before charging anyone. Set in `PRICE_*`. |
+| **Mailing provider** | PostGrid | US first-class letters from the rendered HTML, USPS verification, and signed webhooks, on a self-serve account with no business-email requirement. The abstraction in `app/providers/base.py` is four methods; another vendor (Stannp, PostalMethods, …) is a new file, not a rewrite. |
+| **Price** | $3.49 ($1.74 postage + $0.95 printing + $0.80 service) | **A placeholder.** PostGrid's Pay-Per-Piece rate for a US B&W first-class letter is roughly $1.02; check the current number and that it covers Stripe's fee before charging anyone. Set in `PRICE_*`. |
 | **Cooldown** | 180 days per address, 3 letters lifetime | Deliberately conservative. This is the main lever between "a public service" and "a way to bother someone repeatedly". |
 | **Retention** | 90 days, then erase | Long enough to answer "what did you send?" and settle a refund. |
 | **No `react-router`** | A ~90-line hash router | Pages needs nothing more, and it removed the only routing dependency. If you later want history-API URLs, you will want the library back and a `404.html` redirect. |
@@ -218,5 +224,6 @@ npm install`) and will use it from then on.
 2. **Run `npm install` in `frontend/` and commit the lockfile**, then let CI run
    the 66 pytest tests and 50 Vitest cases that could not execute in the build
    sandbox.
-3. **Before charging anyone**, check the price against Lob's current rates and
-   send yourself a test letter end to end, with a test key, at your own address.
+3. **Before charging anyone**, check the price against PostGrid's current rates
+   and send yourself a test letter end to end, with a test key, at your own
+   address.

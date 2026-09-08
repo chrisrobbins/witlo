@@ -326,8 +326,8 @@ def test_a_live_deployment_wired_to_the_mock_refuses_to_start() -> None:
             app_mode="live",
             mail_provider="mock",
             address_pepper="a-real-pepper-value",
-            lob_api_key="live_x",
-            lob_webhook_secret="s",
+            postgrid_api_key="live_sk_x",
+            postgrid_webhook_secret="s",
             return_line1="1 Main",
             return_city="Marfa",
             return_state="TX",
@@ -349,11 +349,11 @@ def test_a_configuration_that_charges_but_cannot_mail_refuses_to_start() -> None
         )
 
 
-def test_a_live_lob_key_is_refused_unless_explicitly_allowed() -> None:
-    from app.providers.lob import LobMailProvider
+def test_a_live_postgrid_key_is_refused_unless_explicitly_allowed() -> None:
+    from app.providers.postgrid import PostGridMailProvider
 
-    with pytest.raises(ValueError, match="Refusing a live Lob key"):
-        LobMailProvider("live_abc", "whsec", allow_live_key=False)
+    with pytest.raises(ValueError, match="Refusing a live PostGrid key"):
+        PostGridMailProvider("live_sk_abc", "whsec", allow_live_key=False)
 
 
 def test_cors_wildcards_are_rejected_at_startup() -> None:

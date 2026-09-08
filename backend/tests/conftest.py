@@ -6,7 +6,7 @@ at import time. Getting this order wrong silently gives you a suite running
 against whatever `.env` happens to be on the machine.
 
 Every test here runs against a throwaway SQLite file with the mock providers.
-Nothing in this suite can reach Stripe, Lob, or the postal service.
+Nothing in this suite can reach Stripe, PostGrid, or the postal service.
 """
 
 from __future__ import annotations

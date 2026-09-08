@@ -7,10 +7,11 @@ with unit tests that need no network and no vendor package; and it keeps the
 security-critical code importable in environments where the SDKs are not
 installed.
 
-Both algorithms are HMAC-SHA256 over `"{timestamp}.{raw_body}"`, which is
-convenient but *not* an excuse to share one code path — the header formats and
-the failure modes differ, and a shared "generic verifier" is how you end up
-accepting a Lob signature on a Stripe endpoint.
+Stripe and PostGrid happen to use the same construction — HMAC-SHA256 over
+`"{timestamp}.{raw_body}"`, with a `t=<unix>,v1=<hex>` header. They still get
+one function each: each is bound to its own endpoint and its own webhook secret,
+and a payload signed with the mailing secret must never verify on the payment
+endpoint. A single "generic verifier" invites exactly that mistake.
 """
 
 from __future__ import annotations
@@ -92,36 +93,48 @@ def verify_stripe_signature(
     return VerifiedWebhook(provider="stripe", timestamp=timestamp, body=body)
 
 
-def verify_lob_signature(
+def verify_postgrid_signature(
     body: bytes,
-    signature: str,
-    timestamp_header: str,
+    signature_header: str,
     secret: str,
     *,
     tolerance: int = DEFAULT_TOLERANCE_SECONDS,
     now: float | None = None,
 ) -> VerifiedWebhook:
-    """Verify Lob's `Lob-Signature` / `Lob-Signature-Timestamp` pair.
+    """Verify a `PostGrid-Signature` header.
 
-    Lob's timestamp header is in milliseconds; it is signed as the exact string
-    it arrived as, so it must not be reformatted before hashing.
+    Format: `t=<unix seconds>,v1=<hex>`. The signed message is
+    `"{t}.{raw body}"`. Multiple `v1` values can appear while a webhook secret is
+    being rolled; any one matching is enough. Kept separate from the Stripe
+    verifier — same maths, different secret, different endpoint.
     """
     if not secret:
-        raise SignatureError("No Lob webhook secret is configured.")
-    if not signature or not timestamp_header:
-        raise SignatureError("Missing Lob signature headers.")
+        raise SignatureError("No PostGrid webhook secret is configured.")
+    if not signature_header:
+        raise SignatureError("Missing PostGrid-Signature header.")
 
+    timestamp_raw: str | None = None
+    signatures: list[str] = []
+    for part in signature_header.split(","):
+        key, _, value = part.strip().partition("=")
+        if key == "t":
+            timestamp_raw = value
+        elif key == "v1":
+            signatures.append(value)
+
+    if timestamp_raw is None or not signatures:
+        raise SignatureError("Malformed PostGrid-Signature header.")
     try:
-        timestamp_ms = int(timestamp_header)
+        timestamp = int(timestamp_raw)
     except ValueError as exc:
-        raise SignatureError("Malformed Lob-Signature-Timestamp.") from exc
+        raise SignatureError("Malformed PostGrid-Signature timestamp.") from exc
 
-    expected = _expected(secret, timestamp_header, body)
-    if not hmac.compare_digest(expected, signature):
-        raise SignatureError("Lob signature did not match.")
+    expected = _expected(secret, timestamp_raw, body)
+    if not any(hmac.compare_digest(expected, candidate) for candidate in signatures):
+        raise SignatureError("PostGrid signature did not match.")
 
-    _check_timestamp(timestamp_ms // 1000, tolerance, now)
-    return VerifiedWebhook(provider="lob", timestamp=timestamp_ms // 1000, body=body)
+    _check_timestamp(timestamp, tolerance, now)
+    return VerifiedWebhook(provider="postgrid", timestamp=timestamp, body=body)
 
 
 def digest(value: str) -> str:

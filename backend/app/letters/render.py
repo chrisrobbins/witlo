@@ -14,9 +14,9 @@ from html import escape
 
 from .composer import LetterDocument, Paragraph
 
-#: Lob prints the recipient block through an envelope window on the first page,
-#: so the top of page one must stay clear. 2.5 inches is their published
-#: requirement for `address_placement: top_first_page`.
+#: PostGrid stamps the recipient block onto the first page for
+#: `addressPlacement: top_first_page`, so the top of page one must stay clear.
+#: 2.5 inches comfortably clears the area it uses.
 ADDRESS_WINDOW_INCHES = 2.5
 
 PONZU_SVG = (

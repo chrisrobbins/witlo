@@ -40,8 +40,8 @@ letter can say.
                                             signed webhooks     signed webhooks
                                                        │               │
                                                 ┌──────▼─────┐  ┌──────▼──────┐
-                                                │   Stripe   │  │  Lob (print │
-                                                │  Checkout  │  │  and post)  │
+                                                │   Stripe   │  │  PostGrid   │
+                                                │  Checkout  │  │ (print/post)│
                                                 └────────────┘  └─────────────┘
 ```
 
@@ -82,7 +82,7 @@ frontend/          React + TypeScript + Vite. Publishable to GitHub Pages as-is.
   tests/           Vitest: composition, parity, demo safety, the wizard
 backend/           FastAPI + SQLAlchemy + Alembic.
   app/letters/     composition, address normalization, print rendering
-  app/providers/   mailing-provider abstraction (mock, Lob)
+  app/providers/   mailing-provider abstraction (mock, PostGrid)
   app/payments/    payment-provider abstraction (mock, Stripe)
   app/services/    state machine, pricing, orchestration
   tests/           pytest: composition, signatures, the money-and-mail path
@@ -144,7 +144,7 @@ node scripts/sync-content.mjs --check     # the letter content has not drifted
 node scripts/gen-parity.mjs --check       # TypeScript and Python still agree
 ```
 
-Nothing in either suite can reach Stripe, Lob or the postal service.
+Nothing in either suite can reach Stripe, PostGrid or the postal service.
 
 ### Verifying it in a browser
 

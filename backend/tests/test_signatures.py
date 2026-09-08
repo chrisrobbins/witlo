@@ -13,7 +13,7 @@ import time
 
 from app.core.security import (
     SignatureError,
-    verify_lob_signature,
+    verify_postgrid_signature,
     verify_stripe_signature,
 )
 
@@ -116,66 +116,82 @@ def test_a_zero_tolerance_is_refused_rather_than_disabling_replay_checks() -> No
     assert "replay" in message
 
 
-# --- Lob ------------------------------------------------------------------
+# --- PostGrid -----------------------------------------------------------------
 
 
-LOB_BODY = b'{"id":"evt_lob","event_type":{"id":"letter.processed_for_delivery"}}'
+PG_BODY = b'{"id":"evt_pg","type":"letter.updated","data":{"id":"letter_1","status":"printing"}}'
+PG_SECRET = "webhook_secret_pg"
 
 
-def test_lob_accepts_a_correct_signature() -> None:
+def _pg_header(secret: str, ts: str, body: bytes) -> str:
+    return f"t={ts},v1={_sign(secret, ts, body)}"
+
+
+def test_postgrid_accepts_a_correct_signature() -> None:
     now = time.time()
-    ts_ms = str(int(now * 1000))
-    signature = _sign(SECRET, ts_ms, LOB_BODY)
-    result = verify_lob_signature(LOB_BODY, signature, ts_ms, SECRET, now=now)
-    assert result.provider == "lob"
+    ts = str(int(now))
+    header = _pg_header(PG_SECRET, ts, PG_BODY)
+    result = verify_postgrid_signature(PG_BODY, header, PG_SECRET, now=now)
+    assert result.provider == "postgrid"
+    assert result.body == PG_BODY
 
 
-def test_lob_rejects_a_forged_signature() -> None:
-    ts_ms = str(int(time.time() * 1000))
-    _rejects(verify_lob_signature, LOB_BODY, "0" * 64, ts_ms, SECRET)
+def test_postgrid_rejects_a_forged_signature() -> None:
+    ts = str(int(time.time()))
+    _rejects(verify_postgrid_signature, PG_BODY, f"t={ts},v1={'0' * 64}", PG_SECRET)
 
 
-def test_lob_rejects_a_tampered_body() -> None:
+def test_postgrid_rejects_a_signature_made_with_a_different_secret() -> None:
     now = time.time()
-    ts_ms = str(int(now * 1000))
-    signature = _sign(SECRET, ts_ms, LOB_BODY)
-    tampered = LOB_BODY.replace(b"processed_for_delivery", b"returned_to_sender")
-    _rejects(verify_lob_signature, tampered, signature, ts_ms, SECRET, now=now)
+    ts = str(int(now))
+    header = _pg_header("wrong_secret", ts, PG_BODY)
+    _rejects(verify_postgrid_signature, PG_BODY, header, PG_SECRET, now=now)
 
 
-def test_lob_rejects_a_replayed_old_event() -> None:
+def test_postgrid_rejects_a_tampered_body() -> None:
     now = time.time()
-    old_ms = str(int((now - 3600) * 1000))
-    signature = _sign(SECRET, old_ms, LOB_BODY)
-    _rejects(verify_lob_signature, LOB_BODY, signature, old_ms, SECRET, now=now)
+    ts = str(int(now))
+    header = _pg_header(PG_SECRET, ts, PG_BODY)
+    tampered = PG_BODY.replace(b"printing", b"returned_to_sender")
+    _rejects(verify_postgrid_signature, tampered, header, PG_SECRET, now=now)
 
 
-def test_lob_signs_the_timestamp_exactly_as_sent() -> None:
-    """Reformatting the timestamp before hashing would break verification."""
+def test_postgrid_rejects_a_replayed_old_event() -> None:
     now = time.time()
-    ts_ms = str(int(now * 1000))
-    padded = ts_ms + "000"[:0]  # same string; the point is that we do not reformat
-    signature = _sign(SECRET, padded, LOB_BODY)
-    assert verify_lob_signature(LOB_BODY, signature, padded, SECRET, now=now)
+    old = str(int(now) - 4000)
+    header = _pg_header(PG_SECRET, old, PG_BODY)
+    message = _rejects(verify_postgrid_signature, PG_BODY, header, PG_SECRET, now=now)
+    assert "tolerance" in message
 
 
-def test_lob_rejects_missing_headers_and_missing_secret() -> None:
-    ts_ms = str(int(time.time() * 1000))
-    _rejects(verify_lob_signature, LOB_BODY, "", ts_ms, SECRET)
-    _rejects(verify_lob_signature, LOB_BODY, "0" * 64, "", SECRET)
-    _rejects(verify_lob_signature, LOB_BODY, "0" * 64, ts_ms, "")
-    _rejects(verify_lob_signature, LOB_BODY, "0" * 64, "not-a-number", SECRET)
-
-
-def test_the_two_schemes_do_not_accept_each_others_signatures() -> None:
-    """A Lob-signed payload must not verify on the payment endpoint."""
+def test_postgrid_rejects_a_future_timestamp_too() -> None:
     now = time.time()
-    ts_ms = str(int(now * 1000))
-    lob_signature = _sign(SECRET, ts_ms, LOB_BODY)
-    _rejects(
-        verify_stripe_signature,
-        LOB_BODY,
-        f"t={int(now)},v1={lob_signature}",
-        SECRET,
-        now=now,
-    )
+    future = str(int(now) + 4000)
+    header = _pg_header(PG_SECRET, future, PG_BODY)
+    _rejects(verify_postgrid_signature, PG_BODY, header, PG_SECRET, now=now)
+
+
+def test_postgrid_accepts_any_valid_v1_during_a_secret_roll() -> None:
+    now = time.time()
+    ts = str(int(now))
+    header = f"t={ts},v1={'a' * 64},v1={_sign(PG_SECRET, ts, PG_BODY)}"
+    assert verify_postgrid_signature(PG_BODY, header, PG_SECRET, now=now).timestamp == int(ts)
+
+
+def test_postgrid_rejects_missing_or_malformed_headers_and_missing_secret() -> None:
+    now = time.time()
+    ts = str(int(now))
+    _rejects(verify_postgrid_signature, PG_BODY, "", PG_SECRET)
+    _rejects(verify_postgrid_signature, PG_BODY, "nonsense", PG_SECRET)
+    _rejects(verify_postgrid_signature, PG_BODY, "t=abc,v1=deadbeef", PG_SECRET, now=now)
+    _rejects(verify_postgrid_signature, PG_BODY, f"v1={'0' * 64}", PG_SECRET)
+    _rejects(verify_postgrid_signature, PG_BODY, _pg_header(PG_SECRET, ts, PG_BODY), "", now=now)
+
+
+def test_the_mail_and_payment_secrets_do_not_cross_verify() -> None:
+    """Same construction, but a payload signed with the mailing secret must not
+    verify on the payment endpoint, which holds a different secret."""
+    now = time.time()
+    ts = str(int(now))
+    header = _pg_header(PG_SECRET, ts, PG_BODY)
+    _rejects(verify_stripe_signature, PG_BODY, header, SECRET, now=now)

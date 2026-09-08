@@ -392,9 +392,9 @@ def test_provider_events_advance_the_status(db, settings, providers) -> None:
 
     for index, (event_type, expected) in enumerate(
         [
-            ("letter.in_transit", LetterStatus.IN_TRANSIT),
-            ("letter.in_local_area", LetterStatus.IN_LOCAL_AREA),
-            ("letter.processed_for_delivery", LetterStatus.PROCESSED_FOR_DELIVERY),
+            ("letter.entered_mail_stream", LetterStatus.IN_TRANSIT),
+            ("letter.out_for_delivery", LetterStatus.PROCESSED_FOR_DELIVERY),
+            ("letter.completed", LetterStatus.PROCESSED_FOR_DELIVERY),
         ]
     ):
         mailing.handle_mail_event(
@@ -422,7 +422,9 @@ def test_an_out_of_order_provider_event_does_not_move_the_letter_backwards(
     mailing.submit_letter(db, settings=settings, mail=mail, payments=payments, letter=letter)
     db.refresh(letter)
 
-    for index, event_type in enumerate(["letter.processed_for_delivery", "letter.in_transit"]):
+    for index, event_type in enumerate(
+        ["letter.processed_for_delivery", "letter.entered_mail_stream"]
+    ):
         mailing.handle_mail_event(
             db,
             event=ProviderEvent(
