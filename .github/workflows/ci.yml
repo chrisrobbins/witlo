@@ -106,22 +106,8 @@ jobs:
         working-directory: frontend
         run: npm test
 
-      - name: Build for a project page
+      - name: Build (same config Vercel uses — served from the domain root)
         working-directory: frontend
-        env:
-          VITE_BASE_PATH: /whyisthislighton/
-        run: npm run build
-
-      - name: Assets use the project base path
-        working-directory: frontend
-        run: |
-          grep -q 'src="/whyisthislighton/assets/' dist/index.html
-          echo "Base path applied correctly."
-
-      - name: Build for a custom domain
-        working-directory: frontend
-        env:
-          VITE_BASE_PATH: /
         run: npm run build
 
       - name: No key-shaped strings in the bundle

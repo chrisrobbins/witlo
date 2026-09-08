@@ -56,7 +56,7 @@ const env = JSON.stringify({
   DEV: false,
   PROD: true,
   VITE_API_BASE_URL: apiBase,
-  VITE_CONTACT_EMAIL: 'hello@whyisthislighton.com',
+  VITE_CONTACT_EMAIL: 'hello@witlo.info',
 });
 
 execFileSync(

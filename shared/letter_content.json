@@ -4,8 +4,8 @@
 
   "service": {
     "name": "Why Is This Light On?",
-    "url": "whyisthislighton.com",
-    "opt_out_path": "whyisthislighton.com/#/no-more-letters"
+    "url": "witlo.info",
+    "opt_out_path": "witlo.info/#/no-more-letters"
   },
 
   "recipient_line": "To the resident or property manager",
@@ -84,7 +84,7 @@
 
   "mascot_caption": "Ponzu the javelina says: the stars are still up there.",
 
-  "footer": "This letter was sent through whyisthislighton.com, a small public-service project that helps neighbors share information about outdoor lighting. It was assembled from a template; a neighbor chose which observations and suggestions to include. The sender's identity and home address are not shared with you, no one has been reported to anyone, and no response is expected. If you would rather not receive letters like this again, visit whyisthislighton.com/#/no-more-letters and we will add this address to our do-not-mail list.",
+  "footer": "This letter was sent through witlo.info, a small public-service project that helps neighbors share information about outdoor lighting. It was assembled from a template; a neighbor chose which observations and suggestions to include. The sender's identity and home address are not shared with you, no one has been reported to anyone, and no response is expected. If you would rather not receive letters like this again, visit witlo.info/#/no-more-letters and we will add this address to our do-not-mail list.",
 
   "limits": {
     "note_max_chars": 200,

@@ -196,7 +196,7 @@ def test_unknown_selection_keys_are_rejected_rather_than_ignored() -> None:
 
 def test_letter_mentions_the_service_and_the_opt_out() -> None:
     doc = _compose()
-    assert "whyisthislighton.com" in doc.plain_text
+    assert "witlo.info" in doc.plain_text
     assert "no-more-letters" in doc.plain_text
 
 

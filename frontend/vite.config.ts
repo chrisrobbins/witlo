@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react';
 /**
  * Base path notes (GitHub Pages):
  *
- *  - Custom domain (www.whyisthislighton.com) or a user/org page:  VITE_BASE_PATH=/
+ *  - Custom domain (witlo.info) or a user/org page:  VITE_BASE_PATH=/
  *  - Project page (https://<user>.github.io/<repo>/):              VITE_BASE_PATH=/<repo>/
  *
  * The deploy workflow sets this automatically. Everything in the app that

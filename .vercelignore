@@ -1,0 +1,16 @@
+# Keep the deployment upload (and the Python function bundle) lean.
+.git
+.github
+docs
+tools
+scripts
+frontend/node_modules
+frontend/dist
+backend/.venv
+backend/tests
+backend/.env
+backend/*.db
+backend/htmlcov
+backend/.pytest_cache
+backend/.ruff_cache
+**/__pycache__

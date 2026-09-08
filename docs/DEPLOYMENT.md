@@ -1,22 +1,24 @@
 # Deployment guide
 
-Four things to set up, in an order that lets you stop at any point and still
-have something working:
+Everything runs from **one Vercel project**: the static frontend and the Python
+API are the same deployment, served from the same domain, so there is no CORS
+and one dashboard. Four steps, in an order that lets you stop at any point and
+still have something working:
 
 1. [Local development](#1-local-development)
-2. [The demo on GitHub Pages](#2-the-demo-on-github-pages) — publishable today, no accounts
+2. [Deploy to Vercel](#2-deploy-to-vercel) — the demo, publishable today with no accounts
 3. [The custom domain](#3-the-custom-domain)
-4. [The API and live mailing](#4-the-api) — the part that needs your credentials
+4. [Going live: PostGrid and Stripe](#4-going-live-postgrid-and-stripe) — the part that needs your credentials
 
 Steps 1 and 2 need nothing from you. Step 3 needs your DNS. Step 4 needs a
-PostGrid account, a Stripe account, and a host.
+PostGrid account, a Stripe account, and a Postgres database (Neon).
 
 ---
 
 ## 1. Local development
 
 ```bash
-git clone <your repo> && cd whyisthislighton
+git clone <your repo> && cd witlo
 cd frontend && npm install && npm run dev
 ```
 
@@ -34,123 +36,104 @@ nothing that can post a letter.
 
 ---
 
-## 2. The demo on GitHub Pages
+## 2. Deploy to Vercel
 
-**In the repository, once:**
+`vercel.json` at the repo root already describes the whole thing: build the
+frontend, serve it from the root, route `/api/*` to the Python function in
+`api/index.py` (which imports the FastAPI app from `backend/`), and run the two
+recurring jobs on a cron.
 
-1. Settings → Pages → **Source: GitHub Actions**.
-2. Push to `main`.
+**Once:**
 
-That is the whole setup. The workflow builds the frontend and publishes it at
-`https://<owner>.github.io/<repo>/`, in demo mode, because `API_BASE_URL` is
-unset.
+1. [vercel.com/new](https://vercel.com/new) → import the GitHub repo.
+2. Leave the framework preset as detected and the root directory as `./`. Vercel
+   reads `vercel.json` for the build command and output directory; don't
+   override them.
+3. Set the **Python Version** to 3.12 (Project → Settings → General).
+4. Environment variables (Project → Settings → Environment Variables). For the
+   demo, only two, in **all** environments:
 
-### How the base path is handled
+   ```
+   VITE_API_BASE_URL = /
+   VITE_CONTACT_EMAIL = hello@witlo.info
+   ```
 
-GitHub Pages serves a project site from a sub-path, which breaks naïvely built
-assets. The workflow resolves it automatically:
+   `VITE_API_BASE_URL=/` means "the API is on this same origin". Leave it unset
+   and the build is a pure browser-only demo with no API at all — also fine, and
+   the safe default.
+5. Deploy. Every push to `main` redeploys production; every branch and PR gets
+   its own preview URL with the same config.
 
-| Where it is served | `VITE_BASE_PATH` | Set by |
-|---|---|---|
-| `https://<owner>.github.io/<repo>/` | `/<repo>/` | the workflow, when `CUSTOM_DOMAIN` is unset |
-| `https://www.whyisthislighton.com/` | `/` | the workflow, when `CUSTOM_DOMAIN` is set |
+That is the whole setup for the demo. `APP_MODE` defaults to `demo`, so the API
+comes up in mock mode — it can compose and price a letter but the startup check
+refuses to let it mail or charge anything. Section 4 turns that on.
 
-Everything in the app that builds an asset URL uses `import.meta.env.BASE_URL`,
-and CI asserts that a project-page build actually emits `/<repo>/assets/…`.
+### Routing
 
-### Why routing works without any rewrite rules
-
-The app uses hash routing: `…/#/create` is one document plus a fragment. Pages
-serves the same `index.html` for it whatever the path, so there is no 404
-redirect trick, no `404.html` copy, and no difference in behaviour between the
-project URL and the custom domain. Deep links, refreshes and shared URLs all
-work.
-
-`.nojekyll` is written into the build so Pages does not run Jekyll and discard
-Vite's underscore-prefixed files.
+The frontend uses hash routing (`…/#/create` is one document plus a fragment),
+so there are no SPA rewrite rules to configure — `index.html` is served for
+every non-`/api` path and the fragment does the rest. Deep links, refreshes and
+shared URLs all work.
 
 ---
 
 ## 3. The custom domain
 
-**1. Add the repository variable.** Settings → Secrets and variables → Actions →
-Variables → New variable:
+**1.** Project → Settings → Domains → add `witlo.info` and
+`www.witlo.info`. Pick one as primary; Vercel 308-redirects the other
+to it.
 
-```
-CUSTOM_DOMAIN = www.whyisthislighton.com
-```
+**2.** Point DNS at Vercel as it instructs — usually an `A` record for the apex
+to `76.76.21.21` and a `CNAME` for `www` to `cname.vercel-dns.com`. Vercel
+verifies and issues the TLS certificate automatically, typically within minutes.
 
-The next deploy writes a `CNAME` file into the build and switches the base path
-to `/`.
-
-**2. Point DNS at GitHub.** At your registrar, for the apex domain and the `www`
-subdomain:
-
-```
-# www — a CNAME to your Pages host
-www.whyisthislighton.com.   CNAME   <owner>.github.io.
-
-# apex — four A records (and the AAAA records if you want IPv6)
-whyisthislighton.com.       A       185.199.108.153
-whyisthislighton.com.       A       185.199.109.153
-whyisthislighton.com.       A       185.199.110.153
-whyisthislighton.com.       A       185.199.111.153
-```
-
-> Check GitHub's current Pages IP addresses before you paste these; GitHub
-> publishes them in *Managing a custom domain for your GitHub Pages site*. They
-> change rarely, but they do change.
-
-**3. Set it in GitHub too.** Settings → Pages → Custom domain →
-`www.whyisthislighton.com` → Save. Wait for the DNS check to pass, then tick
-**Enforce HTTPS**. The certificate is issued by GitHub automatically and can
-take up to an hour on first setup.
-
-**4. Decide which host is canonical.** Serving both the apex and `www` is fine;
-GitHub redirects one to the other based on what you entered as the custom
-domain. Whichever you choose must match `CUSTOM_DOMAIN` and must be in the
-API's `CORS_ALLOW_ORIGINS`.
+**3.** Because the API shares this origin, there is nothing else to change — no
+`CORS_ALLOW_ORIGINS` to update, no second subdomain. If you later split the API
+onto its own host, that is when CORS and a separate `api.` record come back.
 
 ---
 
-## 4. The API
+## 4. Going live: PostGrid and Stripe
 
-Everything below this line is only needed for live mailing. The demo does not
-use any of it.
+Everything below this line is only needed for real mailing. The demo does not
+use any of it. The API is already deployed from step 2 — going live is adding
+credentials and flipping `APP_MODE`.
 
-### 4a. Choose a host
+### 4a. The database
 
-The API is a standard container: `backend/Dockerfile`, listening on `$PORT`,
-with a `/api/v1/health` endpoint for health checks. Anything that runs
-containers works. Two that fit this shape well:
+Serverless functions have no disk, so SQLite is out. Add **Neon** from the
+Vercel Marketplace (Project → Storage → Create Database → Neon) and it injects a
+pooled `DATABASE_URL` into the project automatically. If you bring your own Neon
+or Supabase project, use its **pooled** connection string (Neon's `-pooler`
+host; Supabase port 6543) and set `DATABASE_URL` yourself, in the
+`postgresql+psycopg://…` form.
 
-**Fly.io** — good if you want the database and the app in one place, and the
-cheapest way to keep a small always-on service.
+Then create the schema — there is no shell, so use the migrate endpoint:
 
 ```bash
-cd backend
-fly launch --no-deploy                 # creates fly.toml; pick a region near your users
-fly postgres create --name wittl-db    # or bring your own PostgreSQL
-fly postgres attach wittl-db           # sets DATABASE_URL
-fly secrets set \
-  APP_MODE=live \
-  ADDRESS_PEPPER="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
-  CORS_ALLOW_ORIGINS=https://www.whyisthislighton.com \
-  MAIL_PROVIDER=postgrid POSTGRID_API_KEY=... POSTGRID_WEBHOOK_SECRET=... \
-  PAYMENT_PROVIDER=stripe STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=...
-fly deploy
-fly ssh console -C "alembic upgrade head"
+curl -X POST https://<your-app>/api/v1/internal/migrate \
+  -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-**Render** — good if you prefer a dashboard and a managed PostgreSQL with
-automatic backups. Create a Web Service from `backend/`, choose Docker, add a
-PostgreSQL instance, set the environment variables in the dashboard, and set the
-pre-deploy command to `alembic upgrade head`.
+Run it again after any deploy that adds a migration. (`CRON_SECRET` is set in
+4d.)
 
-Whichever you choose: **run migrations as a release step, not in the container's
-entrypoint.** Two replicas racing to migrate on every deploy is a bad day.
+### 4b. The recurring jobs
 
-### 4b. Get a mailing provider
+`vercel.json` already registers two crons against the project:
+
+| Path | Schedule | What |
+|---|---|---|
+| `/api/v1/internal/submit-pending` | hourly | hand any paid-but-unmailed letter to PostGrid |
+| `/api/v1/internal/purge-expired` | daily | erase personal data past `RETENTION_DAYS` |
+
+They only work once `CRON_SECRET` is set (4d); Vercel sends it as a bearer token
+automatically. `submit-pending` is a safety net — a letter is normally submitted
+in the moment its payment webhook is processed — so on Vercel's Hobby plan, where
+crons run once a day, the worst case is a stuck letter waiting a day for the
+retry. On Pro the hourly schedule applies.
+
+### 4c. Get a mailing provider
 
 [PostGrid](https://postgrid.com) is what the integration targets: US first-class
 letters printed from the rendered HTML, USPS address verification, and signed
@@ -185,12 +168,12 @@ before deploying, expose the local API with a tunnel
 `https://<tunnel>/api/v1/webhooks/mail`. Address verification and letter
 creation work against `localhost` directly with a `test_sk_…` key.
 
-### 4c. Get Stripe working, in test mode
+### 4d. Get Stripe working, in test mode
 
 1. Stripe → Developers → API keys → copy the **test** secret key
    (`sk_test_…`) into `STRIPE_SECRET_KEY`.
 2. Developers → Webhooks → add an endpoint at
-   `https://<your-api>/api/v1/webhooks/payments`, subscribed to:
+   `https://<your-app>/api/v1/webhooks/payments`, subscribed to:
    - `checkout.session.completed`
    - `checkout.session.async_payment_succeeded`
    - `checkout.session.async_payment_failed`
@@ -213,18 +196,45 @@ can prove this to yourself by completing a test payment with the webhook
 endpoint disabled: the browser shows a receipt page that says *waiting on
 payment*, and no letter is submitted.
 
-### 4d. Point the frontend at it
+### 4e. The Vercel environment variables
 
-Repository → Settings → Secrets and variables → Actions → Variables:
+Project → Settings → Environment Variables. Server-side values (everything
+except the two `VITE_*` ones) belong in **Production** only unless you also want
+previews hitting real providers.
 
 ```
-API_BASE_URL = https://api.whyisthislighton.com
+APP_MODE                 = live          # keep at demo until 4f is done
+DATABASE_URL             = <from Neon; pooled>   # skip if the Neon integration set it
+ADDRESS_PEPPER           = <permanent; python -c "import secrets;print(secrets.token_urlsafe(48))">
+CORS_ALLOW_ORIGINS       = https://witlo.info,https://www.witlo.info
+CRON_SECRET              = <python -c "import secrets;print(secrets.token_urlsafe(32))">
+
+MAIL_PROVIDER            = postgrid
+POSTGRID_API_KEY         = live_sk_…
+POSTGRID_AV_API_KEY      = live_sk_…     # optional; blank = verify via a contact
+POSTGRID_WEBHOOK_SECRET  = <from the PostGrid webhook, JSON format>
+POSTGRID_USE_TEST_KEY_ONLY = false       # only when you mean it
+
+PAYMENT_PROVIDER         = stripe
+STRIPE_SECRET_KEY        = sk_live_…
+STRIPE_WEBHOOK_SECRET    = whsec_…
+CHECKOUT_SUCCESS_URL     = https://witlo.info/#/receipt?letter={LETTER_ID}
+CHECKOUT_CANCEL_URL      = https://witlo.info/#/create
+
+RETURN_NAME  = Why Is This Light On?
+RETURN_LINE1 = …
+RETURN_CITY  = …
+RETURN_STATE = …
+RETURN_ZIP   = …
+
+TURNSTILE_SECRET_KEY     = <see 4f>
 ```
 
-The next deploy publishes in live mode. The workflow's summary says which mode
-it published, on every run.
+The two build-time frontend values (`VITE_API_BASE_URL=/`, `VITE_CONTACT_EMAIL`)
+from step 2 stay as they are. Redeploy after changing any variable — Vercel does
+not apply them to the running deployment retroactively.
 
-### 4e. Turn on bot protection
+### 4f. Turn on bot protection
 
 Once real money is involved, set `TURNSTILE_SECRET_KEY` to a
 [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) secret. It
@@ -236,18 +246,18 @@ is a no-op while blank; once set, the draft endpoint requires a valid token.
 
 | # | Step | Where |
 |---|---|---|
-| 1 | Generate a permanent `ADDRESS_PEPPER` | your host's secrets |
-| 2 | `MAIL_PROVIDER=postgrid` with **test** keys (Print & Mail + Address Verification) | your host's secrets |
-| 3 | `PAYMENT_PROVIDER=stripe` with **test** keys | your host's secrets |
-| 4 | Set both webhook endpoints and their signing secrets (PostGrid webhook: JSON format) | PostGrid + Stripe dashboards |
-| 5 | Set the `RETURN_*` address | your host's secrets |
-| 6 | Fill in the `[ … ]` placeholders on the Privacy and Terms pages | `frontend/src/routes/Legal.tsx` |
-| 7 | Check the prices against PostGrid's current rates | `PRICE_*` variables |
-| 8 | Send yourself a test letter, end to end | your own address |
-| 9 | `APP_MODE=live`, `POSTGRID_USE_TEST_KEY_ONLY=false`, live keys | your host's secrets |
-| 10 | Set `API_BASE_URL` in the GitHub repository variables | GitHub |
+| 1 | Add Neon; run `POST /api/v1/internal/migrate` | Vercel Storage + curl |
+| 2 | Generate a permanent `ADDRESS_PEPPER` and a `CRON_SECRET` | Vercel env vars |
+| 3 | `MAIL_PROVIDER=postgrid` with **test** keys (Print & Mail, + Address Verification) | Vercel env vars |
+| 4 | `PAYMENT_PROVIDER=stripe` with **test** keys | Vercel env vars |
+| 5 | Set both webhook endpoints and their signing secrets (PostGrid webhook: JSON format) | PostGrid + Stripe dashboards |
+| 6 | Set the `RETURN_*` address | Vercel env vars |
+| 7 | Fill in the `[ … ]` placeholders on the Privacy and Terms pages | `frontend/src/routes/Legal.tsx` |
+| 8 | Check the prices against PostGrid's current rates | `PRICE_*` variables |
+| 9 | Send yourself a test letter, end to end | your own address |
+| 10 | `APP_MODE=live`, `POSTGRID_USE_TEST_KEY_ONLY=false`, live keys, redeploy | Vercel env vars |
 
-The app refuses to start if step 9 is done without steps 1–5, which is the
+The app refuses to start if step 10 is done without steps 2–6, which is the
 intended behaviour: it should not be possible to have a deployment that takes
 money and posts nothing.
 
@@ -260,25 +270,26 @@ money and posts nothing.
 
 ## Environment variables
 
-### Frontend — all public, all inlined into the bundle
+### Frontend — build-time, all public, all inlined into the bundle
 
 | Variable | Default | Notes |
 |---|---|---|
-| `VITE_API_BASE_URL` | *(empty)* | Empty = demo mode. Set to the API origin, no trailing slash. |
-| `VITE_BASE_PATH` | `/` | Set by the deploy workflow. |
-| `VITE_CONTACT_EMAIL` | `hello@whyisthislighton.com` | Shown on the privacy page. |
+| `VITE_API_BASE_URL` | *(empty)* | Empty = demo mode. `/` = same-origin API (the Vercel deployment). A full origin for a separately hosted API. |
+| `VITE_BASE_PATH` | `/` | Served from the domain root; only change to host the static build under a sub-path. |
+| `VITE_CONTACT_EMAIL` | `hello@witlo.info` | Shown on the privacy page. |
 
 Nothing secret goes here, ever. Vite inlines these into JavaScript that anyone
-can read with View Source, and both CI and the deploy workflow fail the build if
-a key-shaped string appears in `dist/`.
+can read with View Source, and CI fails the build if a key-shaped string appears
+in `dist/`.
 
-### Backend
+### Backend — Vercel Environment Variables (Production)
 
 | Variable | Default | Notes |
 |---|---|---|
 | `APP_MODE` | `demo` | `live` enables the startup checks below. |
-| `DATABASE_URL` | SQLite file | PostgreSQL in production. |
-| `CORS_ALLOW_ORIGINS` | `http://localhost:5173` | Comma-separated exact origins. Wildcards are rejected at startup. |
+| `DATABASE_URL` | SQLite file | A **pooled** Postgres URL in production (`postgresql+psycopg://…`). Set by the Neon integration. |
+| `CRON_SECRET` | *(empty)* | Bearer token for `/api/v1/internal/*`. Blank disables that router. Vercel Cron sends it automatically. |
+| `CORS_ALLOW_ORIGINS` | `http://localhost:5173` | Comma-separated exact origins. Wildcards are rejected at startup. Unused when the frontend and API share an origin. |
 | `ADDRESS_PEPPER` | dev value | **Permanent.** See the warning above. |
 | `MAIL_PROVIDER` | `mock` | `mock` or `postgrid`. |
 | `POSTGRID_API_KEY` / `POSTGRID_WEBHOOK_SECRET` | — | Required when `MAIL_PROVIDER=postgrid`. Webhook must be JSON format. |
@@ -313,30 +324,23 @@ a key-shaped string appears in `dist/`.
 
 ### Recurring jobs
 
-Two things want a schedule. Neither is urgent enough to need a queue.
+Two, both registered as crons in `vercel.json` and run as HTTP endpoints
+(`app/api/internal.py`) because a serverless deployment has no worker process:
 
-```bash
-# Every 10 minutes: pick up letters that were paid for but not submitted,
-# usually because a worker died mid-submission. Safe to run concurrently.
-python -c "
-from app.db.session import session_scope
-from app.core.config import get_settings
-from app.providers.factory import get_providers
-from app.services import mailing
-mail, payments = get_providers()
-with session_scope() as db:
-    for letter in mailing.find_retryable(db):
-        mailing.submit_letter(db, settings=get_settings(), mail=mail, payments=payments, letter=letter)
-"
+| Endpoint | Cron | Purpose |
+|---|---|---|
+| `POST /api/v1/internal/submit-pending` | hourly | pick up letters paid for but not yet handed to PostGrid, or stuck mid-submission — a safety net for the inline submission |
+| `POST /api/v1/internal/purge-expired` | daily | blank the address, letter text and email on letters past `RETENTION_DAYS` |
 
-# Daily: erase the personal data on letters past their retention date.
-python -c "
-from app.db.session import session_scope
-from app.services import mailing
-with session_scope() as db:
-    print('purged', mailing.purge_expired(db))
-"
-```
+Both require `Authorization: Bearer $CRON_SECRET`; Vercel adds it automatically.
+To run one by hand: `curl -X POST https://<app>/api/v1/internal/submit-pending -H "Authorization: Bearer $CRON_SECRET"`.
+There is also `POST /api/v1/internal/migrate` (`alembic upgrade head`) for the
+same "no shell" reason.
+
+> Vercel Hobby runs each cron **once a day** regardless of the schedule. That is
+> fine for `purge-expired` and acceptable for `submit-pending` (a stuck letter
+> waits up to a day for the retry; the common path submits immediately on the
+> payment webhook). Pro honours the hourly schedule.
 
 ### When a letter fails after payment
 
@@ -361,18 +365,22 @@ site.
 
 ## Troubleshooting
 
-**Assets 404 on the project URL.** `VITE_BASE_PATH` did not match. It should be
-`/<repo>/` with both slashes. The workflow does this for you; check whether
-`CUSTOM_DOMAIN` is set when it should not be.
+**`/api/*` returns 404 on Vercel.** The Python function did not build or the
+rewrite is not matching. Check the deployment's Functions tab for `api/index.py`
+and its build log; a `ModuleNotFoundError` there usually means `requirements.txt`
+at the repo root did not resolve, or `includeFiles` did not carry `backend/`.
 
-**The custom domain serves the old project-path build.** Pages caches
-aggressively. Re-run the deploy workflow after setting `CUSTOM_DOMAIN`, and
-confirm the `CNAME` file is present in the artifact.
+**The frontend loads but every API call fails.** `VITE_API_BASE_URL` was not set
+to `/` for that environment, so the build is still in demo mode (or is pointed
+at the wrong origin). It is a build-time value — redeploy after changing it.
 
-**Browser console: blocked by CORS.** The site's origin is not in
-`CORS_ALLOW_ORIGINS` on the API. It must match exactly, including scheme and
-subdomain — `https://www.whyisthislighton.com` and
-`https://whyisthislighton.com` are two different origins.
+**Browser console: blocked by CORS.** Only happens if the API is on a different
+origin than the site. Add that origin to `CORS_ALLOW_ORIGINS` exactly, including
+scheme and subdomain — `https://www.witlo.info` and
+`https://witlo.info` are two different origins.
+
+**A cron endpoint returns 404.** `CRON_SECRET` is not set, which disables the
+whole `/api/v1/internal/*` router. A 401 there means the token is wrong.
 
 **Payments succeed but no letter is submitted.** Look at the webhook deliveries
 in the Stripe dashboard. A 400 from `/api/v1/webhooks/payments` means the

@@ -25,29 +25,29 @@ letter can say.
 ## Architecture
 
 ```
-                     GitHub Pages (static)              Separately hosted
-   ┌──────────────────────────────────┐        ┌────────────────────────────────┐
-   │  React 19 + TypeScript + Vite    │        │  FastAPI + SQLAlchemy          │
-   │                                  │        │  PostgreSQL                    │
-   │  • hash routing — no rewrites    │        │                                │
-   │  • composes the letter locally   │  HTTPS │  • composes the letter again   │
-   │  • prints / downloads it         │ ─────► │  • validates the address       │
-   │  • DEMO MODE by default          │  CORS  │  • prices it (server is the    │
-   │                                  │        │    only authority on price)    │
-   └──────────────────────────────────┘        │  • state machine + idempotency │
-                                               └───────┬───────────────┬────────┘
-                                                       │               │
-                                            signed webhooks     signed webhooks
-                                                       │               │
-                                                ┌──────▼─────┐  ┌──────▼──────┐
-                                                │   Stripe   │  │  PostGrid   │
-                                                │  Checkout  │  │ (print/post)│
-                                                └────────────┘  └─────────────┘
+                    One Vercel project · one domain
+   ┌───────────────────────────────────────────────────────────────┐
+   │  /                          /api/*  ──►  api/index.py          │
+   │  React 19 + TS + Vite                    FastAPI + SQLAlchemy  │
+   │  (static)                               + Neon Postgres        │
+   │  • hash routing — no rewrites            • composes again      │
+   │  • composes the letter locally          • validates address   │
+   │  • prints / downloads it                • prices (sole        │
+   │  • DEMO MODE by default                    authority on price) │
+   │  • same origin: no CORS                 • state machine + idem │
+   └───────────────────────────────────────────┬───────────┬───────┘
+                                               │           │
+                                     signed webhooks   signed webhooks
+                                               │           │
+                                        ┌──────▼─────┐  ┌──▼──────────┐
+                                        │   Stripe   │  │  PostGrid   │
+                                        │  Checkout  │  │ (print/post)│
+                                        └────────────┘  └─────────────┘
 ```
 
-GitHub Pages serves static files and cannot run Python, which is why the API is
-deployed elsewhere. The frontend reaches it through one environment variable and
-nothing else.
+The frontend and the API are one deployment served from one domain, so requests
+go to `/api/*` with no host and there is no CORS. Two Vercel Cron jobs call
+`/api/v1/internal/*` to submit stragglers and purge expired data.
 
 ### The three ideas worth knowing
 
@@ -75,7 +75,7 @@ than judgement calls.
 ## Repository layout
 
 ```
-frontend/          React + TypeScript + Vite. Publishable to GitHub Pages as-is.
+frontend/          React + TypeScript + Vite. Static build, served from the domain root.
   src/lib/         letter composition, address handling, validation, API client
   src/routes/      the pages and the four-step wizard
   src/styles/      design tokens, components, the letter sheet, print rules
@@ -166,9 +166,9 @@ the Vitest suite, not a replacement.
 ## Going live
 
 Demo mode needs no credentials and no decisions. Live mailing needs both, and
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) walks through all of it: GitHub Pages,
-custom-domain DNS, deploying the API, environment variables, and the switch from
-demo to live.
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) walks through all of it: the single
+Vercel project, custom-domain DNS, the Neon database, environment variables, and
+the switch from demo to live.
 
 [`docs/STATUS.md`](docs/STATUS.md) is the honest list — what works, what was
 tested and how, and exactly what still needs your accounts or a business
