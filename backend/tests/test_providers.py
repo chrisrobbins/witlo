@@ -347,15 +347,18 @@ def test_postgrid_verify_uses_the_av_api_when_a_key_is_configured() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         seen["path"] = request.url.path
         seen["api_key"] = request.headers.get("x-api-key")
+        seen["sent"] = json.loads(request.content)["address"]
         return _json(
             {
+                "status": "success",
                 "data": {
                     "status": "corrected",
-                    "line1": "414 W SAN ANTONIO ST",
+                    "line1": "414 W SAN ANTONIO ST STE 2",
                     "city": "MARFA",
-                    "state": "TX",
-                    "zipCode": "79843",
-                }
+                    "provinceOrState": "TX",
+                    "postalOrZip": "79843",
+                    "errors": {},
+                },
             }
         )
 
@@ -363,7 +366,35 @@ def test_postgrid_verify_uses_the_av_api_when_a_key_is_configured() -> None:
     result = provider.verify_address(ADDRESS)
     assert seen["path"] == "/v1/addver/verifications"
     assert seen["api_key"] == "test_sk_av"
+    # PostGrid's AV fields are provinceOrState / postalOrZip, not state / zipCode.
+    assert seen["sent"]["provinceOrState"] == "TX"
+    assert seen["sent"]["postalOrZip"] == "79843"
     assert result.status is Deliverability.DELIVERABLE_WITH_CHANGES
+    assert result.standardized == UsAddress(
+        "414 W SAN ANTONIO ST STE 2", "", "MARFA", "TX", "79843"
+    )
+
+
+def test_postgrid_verify_treats_a_failed_result_with_a_unit_error_as_needs_unit() -> None:
+    # The AV API returns status=failed for a missing secondary unit; that is
+    # recoverable, so it must not read as UNDELIVERABLE.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json(
+            {
+                "data": {
+                    "status": "failed",
+                    "line1": "350 5TH AVE",
+                    "city": "NEW YORK",
+                    "provinceOrState": "NY",
+                    "postalOrZip": "10118",
+                    "errors": {"line1": ["Missing Value: Suite identifier"]},
+                }
+            }
+        )
+
+    result = _postgrid(handler, av_api_key="test_sk_av").verify_address(ADDRESS)
+    assert result.status is Deliverability.NEEDS_UNIT
+    assert result.standardized is not None
 
 
 def test_postgrid_verify_flags_a_missing_unit_as_needs_unit() -> None:

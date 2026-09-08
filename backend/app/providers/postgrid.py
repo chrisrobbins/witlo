@@ -150,7 +150,12 @@ class PostGridMailProvider:
             raw_status, fields, errors = self._verify_via_contact(address)
 
         status = DELIVERABILITY_MAP.get(raw_status, Deliverability.UNDELIVERABLE)
-        if status is Deliverability.DELIVERABLE_WITH_CHANGES and _needs_unit(errors):
+        # A missing unit comes back as `failed` from the AV API (and would from a
+        # live contact check), with a suite/unit error. That is recoverable —
+        # the sender adds the unit — so it is NEEDS_UNIT, not UNDELIVERABLE.
+        if status in (Deliverability.UNDELIVERABLE, Deliverability.DELIVERABLE_WITH_CHANGES) and (
+            _needs_unit(errors)
+        ):
             status = Deliverability.NEEDS_UNIT
 
         standardized: UsAddress | None = None
@@ -179,8 +184,8 @@ class PostGridMailProvider:
                     "line1": address.line1,
                     "line2": address.line2,
                     "city": address.city,
-                    "state": address.state,
-                    "zipCode": address.zip,
+                    "provinceOrState": address.state,
+                    "postalOrZip": address.zip,
                     "country": "US",
                 }.items()
                 if v
@@ -195,8 +200,8 @@ class PostGridMailProvider:
                 "line1": data.get("line1"),
                 "line2": data.get("line2"),
                 "city": data.get("city"),
-                "state": data.get("state"),
-                "zip": data.get("zipCode"),
+                "state": data.get("provinceOrState"),
+                "zip": data.get("postalOrZip"),
             },
             data.get("errors"),
         )
