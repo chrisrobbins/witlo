@@ -51,6 +51,13 @@ export interface DraftPayload {
   note: string;
   suggestions: SuggestionKey[];
   letterFingerprint: string;
+  /**
+   * The date (YYYY-MM-DD) the browser used to compose this letter. Sent so the
+   * server dates its copy the same way — otherwise a letter composed late in
+   * the evening in the Americas is dated a day earlier than the server's UTC
+   * date and the fingerprint check rejects it.
+   */
+  dateIso?: string;
   senderEmail?: string;
   botToken?: string;
 }
@@ -114,15 +121,34 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    const detail = (body as { code?: string; detail?: string } | null) ?? null;
-    throw new ApiError(
-      response.status,
-      detail?.code ?? 'error',
-      detail?.detail ?? `The server responded with ${response.status}.`,
-    );
+    throw apiErrorFrom(response.status, body);
   }
 
   return body as T;
+}
+
+/**
+ * Build an {@link ApiError} from a response body.
+ *
+ * The API returns `{code, detail}` for validation errors but nests everything
+ * else one level deeper as `{detail: {code, detail}}` (FastAPI's HTTPException
+ * envelope). Unwrap both so the message shown to a sender is the sentence the
+ * server wrote, not `[object Object]`.
+ */
+export function apiErrorFrom(status: number, body: unknown): ApiError {
+  const outer = (body ?? null) as { code?: unknown; detail?: unknown } | null;
+  const inner =
+    outer && typeof outer.detail === 'object' && outer.detail !== null
+      ? (outer.detail as { code?: unknown; detail?: unknown })
+      : outer;
+
+  const code = typeof inner?.code === 'string' ? inner.code : 'error';
+  const message =
+    typeof inner?.detail === 'string' && inner.detail.length > 0
+      ? inner.detail
+      : `The server responded with ${status}.`;
+
+  return new ApiError(status, code, message);
 }
 
 export function isConfigured(): boolean {

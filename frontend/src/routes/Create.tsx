@@ -111,6 +111,11 @@ export function Create() {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [step]);
 
+  // Fixed once per draft so the preview, its fingerprint and the date sent to
+  // the server are all composed from the same day, even if the sender lingers
+  // on the page across midnight.
+  const dateIso = useMemo(() => todayIso(), [draft]);
+
   const doc = useMemo(
     () =>
       composeLetter({
@@ -118,9 +123,9 @@ export function Create() {
         observations: draft.observations,
         note: draft.observations.includes('other') ? draft.note : '',
         suggestions: draft.suggestions,
-        dateIso: todayIso(),
+        dateIso,
       }),
-    [draft],
+    [draft, dateIso],
   );
 
   const fingerprint = useMemo(() => letterFingerprint(doc.plainText), [doc.plainText]);
@@ -196,6 +201,7 @@ export function Create() {
                 <PreviewStep
                   doc={doc}
                   fingerprint={fingerprint}
+                  dateIso={dateIso}
                   address={draft.address}
                   observations={draft.observations}
                   note={draft.observations.includes('other') ? draft.note : ''}
@@ -436,6 +442,7 @@ function SuggestionsStep({
 function PreviewStep({
   doc,
   fingerprint,
+  dateIso,
   address,
   observations,
   note,
@@ -445,6 +452,7 @@ function PreviewStep({
 }: {
   doc: ReturnType<typeof composeLetter>;
   fingerprint: string;
+  dateIso: string;
   address: UsAddress;
   observations: ObservationKey[];
   note: string;
@@ -504,6 +512,7 @@ function PreviewStep({
             note={note}
             suggestions={suggestions}
             fingerprint={fingerprint}
+            dateIso={dateIso}
           />
         )}
       </div>
