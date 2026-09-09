@@ -2,3 +2,17 @@
 name = "witlo"
 version = "1.0.0"
 requires-python = ">=3.12,<3.13"
+# Keep these pins aligned with backend/requirements.txt.
+dependencies = [
+  "fastapi==0.115.12",
+  "uvicorn[standard]==0.34.0",
+  "gunicorn==23.0.0",
+  "pydantic==2.11.4",
+  "pydantic-settings==2.8.1",
+  "email-validator==2.2.0",
+  "SQLAlchemy==2.0.40",
+  "alembic==1.15.2",
+  "psycopg[binary]==3.2.6",
+  "httpx==0.28.1",
+  "stripe==11.6.0",
+]
