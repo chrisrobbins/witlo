@@ -7,12 +7,15 @@ is parsed into anything, and so the generated OpenAPI describes real limits.
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.letters.address import UsAddress as DomainAddress
 from app.letters.content import OBSERVATION_KEYS, SUGGESTION_KEYS, note_max_chars
+
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 ObservationKey = Literal["all_night", "upward", "spill", "unused_area", "other"]
 SuggestionKey = Literal[
@@ -78,8 +81,20 @@ class CreateLetterRequest(BaseModel):
     note: str = Field(default="", max_length=1000)
     suggestions: list[SuggestionKey] = Field(default_factory=list, max_length=6)
     letterFingerprint: str = Field(default="", max_length=16)
+    # The date the browser used to compose the letter it is asking us to print.
+    # The sender approved a letter dated this day; if we recompose with a
+    # different date the fingerprints will not match. Blank means "use ours".
+    # The server still bounds it to its own date +/- one day (see create_draft).
+    dateIso: str = Field(default="", max_length=10)
     senderEmail: EmailStr | None = None
     botToken: str | None = Field(default=None, max_length=4096)
+
+    @field_validator("dateIso")
+    @classmethod
+    def _date_iso_shape(cls, value: str) -> str:
+        if value and not _ISO_DATE.fullmatch(value):
+            raise ValueError("dateIso must be YYYY-MM-DD.")
+        return value
 
     @field_validator("observations", "suggestions")
     @classmethod

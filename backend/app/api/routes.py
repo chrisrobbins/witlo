@@ -162,6 +162,7 @@ def create_letter(
             client_fingerprint=payload.letterFingerprint or None,
             sender_email=str(payload.senderEmail or ""),
             client_hash=hashed_client,
+            client_date_iso=payload.dateIso or None,
         )
     except mailing.ServiceError as exc:
         raise _service_error(exc) from exc

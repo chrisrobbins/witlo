@@ -33,3 +33,6 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
+.vercel
+.env*
+.claude/settings.local.json

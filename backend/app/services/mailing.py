@@ -19,7 +19,7 @@ The invariants this module exists to hold:
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -169,6 +169,33 @@ def quote_for(settings: Settings, pages: int) -> Quote:
     )
 
 
+def _letter_date(client_date_iso: str | None) -> str:
+    """The date to compose the letter with.
+
+    The browser dates the letter with *its* local clock, so a sender in the
+    Americas late in the evening approves a letter dated a day earlier than this
+    server's UTC date. Recomposing with the server date would then fail the
+    fingerprint check for a letter the sender read and approved correctly. Trust
+    the client's date, but only within a day of ours so it cannot be used to
+    back- or post-date a letter arbitrarily.
+    """
+    server_iso = today_iso()
+    if not client_date_iso:
+        return server_iso
+    try:
+        client = date.fromisoformat(client_date_iso)
+    except ValueError:
+        return server_iso
+    if abs((client - date.fromisoformat(server_iso)).days) > 1:
+        raise ServiceError(
+            "The date on this letter is too far from today. Please reload the page and read "
+            "it again before sending.",
+            code="stale_date",
+            status_code=409,
+        )
+    return client_date_iso
+
+
 def create_draft(
     db: Session,
     *,
@@ -180,6 +207,7 @@ def create_draft(
     client_fingerprint: str | None,
     sender_email: str,
     client_hash: str,
+    client_date_iso: str | None = None,
 ) -> tuple[Letter, Quote]:
     """Compose the letter server-side and store it.
 
@@ -218,7 +246,7 @@ def create_draft(
             observations=observations,
             note=note,
             suggestions=suggestions,
-            date_iso=today_iso(),
+            date_iso=_letter_date(client_date_iso),
         )
     )
     server_fingerprint = letter_fingerprint(doc.plain_text)

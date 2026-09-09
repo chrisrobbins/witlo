@@ -36,9 +36,17 @@ interface Props {
   note: string;
   suggestions: SuggestionKey[];
   fingerprint: string;
+  dateIso: string;
 }
 
-export function LiveSendPanel({ address, observations, note, suggestions, fingerprint }: Props) {
+export function LiveSendPanel({
+  address,
+  observations,
+  note,
+  suggestions,
+  fingerprint,
+  dateIso,
+}: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [verification, setVerification] = useState<AddressVerification | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -85,6 +93,7 @@ export function LiveSendPanel({ address, observations, note, suggestions, finger
         note,
         suggestions,
         letterFingerprint: fingerprint,
+        dateIso,
         senderEmail: email.trim(),
       });
       setDraft(created);

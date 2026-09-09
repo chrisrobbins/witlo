@@ -126,6 +126,62 @@ def test_an_oversized_note_is_a_validation_error_not_a_silent_trim(client) -> No
     assert response.status_code == 422
 
 
+# --- the sender's date --------------------------------------------------------
+#
+# The browser dates the letter with its local clock, so a sender in the Americas
+# late in the evening approves a letter dated a day before this server's UTC
+# date. The server must date its copy the same way or the fingerprint check
+# rejects a letter the sender read correctly.
+
+
+def _fingerprint_for(date_iso: str) -> str:
+    from app.letters.composer import LetterInput, compose_letter, letter_fingerprint
+
+    doc = compose_letter(
+        LetterInput(
+            address=_domain_address(),
+            observations=["all_night"],
+            note="",
+            suggestions=["shield"],
+            date_iso=date_iso,
+        )
+    )
+    return letter_fingerprint(doc.plain_text)
+
+
+def _domain_address():
+    from app.letters.address import UsAddress
+
+    return UsAddress(**ADDRESS)
+
+
+def test_a_client_date_one_day_off_is_honoured_not_rejected(client) -> None:
+    from datetime import date, timedelta
+
+    from app.letters.composer import format_letter_date
+
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    response = _create(client, dateIso=yesterday, letterFingerprint=_fingerprint_for(yesterday))
+    assert response.status_code == 200
+    # The letter is dated the sender's day, not the server's.
+    assert format_letter_date(yesterday) in response.json()["letterText"]
+
+
+def test_a_client_date_far_from_today_is_refused(client) -> None:
+    from datetime import date, timedelta
+
+    far = (date.today() + timedelta(days=30)).isoformat()
+    response = _create(client, dateIso=far, letterFingerprint=_fingerprint_for(far))
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "stale_date"
+
+
+def test_a_malformed_client_date_is_a_validation_error(client) -> None:
+    response = _create(client, dateIso="sometime last week")
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+
+
 # --- checkout -------------------------------------------------------------
 
 
