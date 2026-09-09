@@ -3,7 +3,6 @@
 .github
 docs
 tools
-scripts
 frontend/node_modules
 frontend/dist
 backend/.venv
